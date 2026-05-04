@@ -3,10 +3,12 @@ import {
   Plus, Save, FolderOpen, Share2, 
   ZoomIn, ZoomOut, Maximize, PanelTopClose, PanelTopOpen,
   Undo2, Redo2, ImageDown, Keyboard, LayoutGrid,
-  Grid3X3, AlignJustify, Crosshair, Ban, Magnet
+  Grid3X3, AlignJustify, Crosshair, Ban, Magnet,
+  Code2, Sparkles, NotebookPen, LayoutTemplate, Command
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useReactFlow, BackgroundVariant } from "@xyflow/react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface TopBarProps {
   name: string;
@@ -21,13 +23,22 @@ interface TopBarProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  onExport: () => void;
+  onExportPNG: () => void;
+  onExportSVG: () => void;
   onLayout: () => void;
   onShortcutsHelp: () => void;
   bgVariant: BackgroundVariant | "none";
   onCycleBgVariant: () => void;
   snapToGrid: boolean;
   onToggleSnap: () => void;
+  isCodePanelOpen: boolean;
+  onToggleCodePanel: () => void;
+  isAIPanelOpen: boolean;
+  onToggleAIPanel: () => void;
+  isNotesPanelOpen: boolean;
+  onToggleNotesPanel: () => void;
+  onOpenTemplates: () => void;
+  onOpenCommandPalette: () => void;
 }
 
 const bgIcons = {
@@ -39,8 +50,10 @@ const bgIcons = {
 
 export function TopBar({ 
   name, setName, onNew, onSave, onLoad, onShare, onTogglePalette, isPaletteVisible,
-  canUndo, canRedo, onUndo, onRedo, onExport, onLayout, onShortcutsHelp,
-  bgVariant, onCycleBgVariant, snapToGrid, onToggleSnap
+  canUndo, canRedo, onUndo, onRedo, onExportPNG, onExportSVG, onLayout, onShortcutsHelp,
+  bgVariant, onCycleBgVariant, snapToGrid, onToggleSnap,
+  isCodePanelOpen, onToggleCodePanel, isAIPanelOpen, onToggleAIPanel,
+  isNotesPanelOpen, onToggleNotesPanel, onOpenTemplates, onOpenCommandPalette
 }: TopBarProps) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   
@@ -73,6 +86,10 @@ export function TopBar({
           <Button variant="ghost" size="sm" onClick={onSave} className="text-gray-300 hover:text-white hover:bg-gray-800 hidden md:flex" title="Save (Ctrl+S)">
             <Save className="w-4 h-4 mr-2" /> Save
           </Button>
+          
+          <Button variant="ghost" size="sm" onClick={onOpenTemplates} className="text-gray-300 hover:text-white hover:bg-gray-800 hidden md:flex" title="Templates">
+            <LayoutTemplate className="w-4 h-4 mr-2" /> Templates
+          </Button>
         </div>
       </div>
 
@@ -86,6 +103,25 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={onOpenCommandPalette} className="text-gray-400 hover:text-white hover:bg-gray-800 hidden lg:flex items-center gap-1 border border-gray-700 bg-[#0f1117]/50 rounded-md px-2 py-1 mr-2" title="Command Palette">
+          <Command className="w-3 h-3" />
+          <span className="text-xs font-mono">⌘K</span>
+        </Button>
+
+        <Button variant="ghost" size="icon" onClick={onToggleNotesPanel} className={`text-gray-300 hover:text-white hover:bg-gray-800 ${isNotesPanelOpen ? 'bg-gray-800 text-white' : ''}`} title="Notes">
+          <NotebookPen className="w-4 h-4" />
+        </Button>
+        
+        <Button variant="ghost" size="icon" onClick={onToggleCodePanel} className={`text-gray-300 hover:text-white hover:bg-gray-800 ${isCodePanelOpen ? 'bg-gray-800 text-white' : ''}`} title="Diagram as Code">
+          <Code2 className="w-4 h-4" />
+        </Button>
+        
+        <Button variant="ghost" size="icon" onClick={onToggleAIPanel} className={`text-gray-300 hover:text-white hover:bg-gray-800 ${isAIPanelOpen ? 'bg-gray-800 text-purple-400' : ''}`} title="AI Diagram Generator">
+          <Sparkles className="w-4 h-4" />
+        </Button>
+
+        <div className="h-6 w-px bg-[#2a3040] mx-1"></div>
+
         <Button variant="ghost" size="icon" onClick={onLayout} className="text-gray-300 hover:text-white hover:bg-gray-800" title="Auto Layout">
           <LayoutGrid className="w-4 h-4" />
         </Button>
@@ -115,9 +151,19 @@ export function TopBar({
         <Button variant="ghost" size="icon" onClick={onTogglePalette} className={`text-gray-300 hover:text-white hover:bg-gray-800 ${isPaletteVisible ? 'bg-gray-800 text-white' : ''}`} title={isPaletteVisible ? "Hide Palette" : "Show Palette"}>
           {isPaletteVisible ? <PanelTopClose className="w-4 h-4" /> : <PanelTopOpen className="w-4 h-4" />}
         </Button>
-        <Button variant="ghost" size="icon" onClick={onExport} className="text-gray-300 hover:text-white hover:bg-gray-800" title="Export PNG">
-          <ImageDown className="w-4 h-4" />
-        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white hover:bg-gray-800" title="Export">
+              <ImageDown className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-[#1a1f2e] border-gray-800 text-gray-200">
+            <DropdownMenuItem onClick={onExportPNG} className="cursor-pointer hover:bg-gray-800 focus:bg-gray-800 focus:text-white">Export PNG</DropdownMenuItem>
+            <DropdownMenuItem onClick={onExportSVG} className="cursor-pointer hover:bg-gray-800 focus:bg-gray-800 focus:text-white">Export SVG</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Button variant="ghost" size="icon" onClick={onShortcutsHelp} className="text-gray-300 hover:text-white hover:bg-gray-800" title="Keyboard Shortcuts">
           <Keyboard className="w-4 h-4" />
         </Button>

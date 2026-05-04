@@ -24,8 +24,14 @@ import { DrawFlowNode, Diagram } from "../types";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useHistory } from "../hooks/useHistory";
-import { toPng } from "html-to-image";
+import { toPng, toSvg } from "html-to-image";
 import { Workflow, Copy, Trash2, FileText } from "lucide-react";
+import { CodePanel } from "./CodePanel";
+import { OllamaPanel } from "./OllamaPanel";
+import { NotesPanel } from "./NotesPanel";
+import { CommandPalette } from "./CommandPalette";
+import { TemplateModal } from "./TemplateModal";
+import { parseDiagramDSL } from "../lib/diagramParser";
 
 const nodeTypes = {
   custom: CustomNode,
@@ -52,6 +58,13 @@ export function DiagramEditorInner() {
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [bgVariant, setBgVariant] = useState<BackgroundVariant | "none">(BackgroundVariant.Dots);
   
+  // New features
+  const [isCodePanelOpen, setIsCodePanelOpen] = useState(false);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+
   // History Hook
   const { takeSnapshot, undo, redo, canUndo, canRedo, clearHistory } = useHistory<DrawFlowNode, Edge>();
   
@@ -117,6 +130,13 @@ export function DiagramEditorInner() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle Command Palette on Cmd+K or Ctrl+K
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+        return;
+      }
+
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
         if (e.key === 'Escape') {
           (document.activeElement as HTMLElement).blur();
@@ -151,6 +171,7 @@ export function DiagramEditorInner() {
         setEdges(eds => eds.map(e => ({ ...e, selected: false })));
         setContextMenu(null);
         setEditingEdge(null);
+        setIsCommandPaletteOpen(false);
       }
     };
 
@@ -277,6 +298,34 @@ export function DiagramEditorInner() {
     }, 500); 
   }, [diagramName, fitView, toast]);
 
+  const handleExportSVG = useCallback(() => {
+    if (reactFlowWrapper.current === null) return;
+    
+    const viewport = reactFlowWrapper.current.querySelector('.react-flow__viewport') as HTMLElement;
+    if (!viewport) return;
+    
+    toast({ title: "Exporting SVG..." });
+    
+    fitView({ padding: 0.2 });
+    
+    setTimeout(() => {
+      toSvg(viewport, {
+        backgroundColor: '#0f1117',
+      })
+      .then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = `${diagramName.replace(/\s+/g, '_').toLowerCase()}.svg`;
+        link.href = dataUrl;
+        link.click();
+        toast({ title: "Export complete!" });
+      })
+      .catch((err) => {
+        console.error("Failed to export svg", err);
+        toast({ title: "Export failed", variant: "destructive" });
+      });
+    }, 500); 
+  }, [diagramName, fitView, toast]);
+
   const handleLayout = useCallback(() => {
     takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
     
@@ -379,6 +428,57 @@ export function DiagramEditorInner() {
     }
   }, [editingEdge, setEdges, takeSnapshot, getNodes, getEdges]);
 
+  const handleCommandAction = (action: string, payload?: any) => {
+    switch (action) {
+      case "NEW_DIAGRAM": handleNew(); break;
+      case "SAVE_DIAGRAM": handleSave(); break;
+      case "OPEN_DIAGRAM": setIsLoadDialogOpen(true); break;
+      case "EXPORT_PNG": handleExportPNG(); break;
+      case "EXPORT_SVG": handleExportSVG(); break;
+      case "TOGGLE_CODE": setIsCodePanelOpen(!isCodePanelOpen); break;
+      case "TOGGLE_AI": setIsAIPanelOpen(!isAIPanelOpen); break;
+      case "TOGGLE_NOTES": setIsNotesPanelOpen(!isNotesPanelOpen); break;
+      case "TOGGLE_PALETTE": setIsPaletteVisible(!isPaletteVisible); break;
+      case "AUTO_LAYOUT": handleLayout(); break;
+      case "FIT_VIEW": fitView({ duration: 800 }); break;
+      case "TOGGLE_SNAP": setSnapToGrid(!snapToGrid); break;
+      case "SHOW_SHORTCUTS": setIsShortcutsDialogOpen(true); break;
+      case "CLEAR_CANVAS": handleNew(); break;
+      case "LOAD_DIAGRAM": if (payload) handleLoad(payload); break;
+      case "OPEN_TEMPLATES": setIsTemplateModalOpen(true); break;
+    }
+  };
+
+  const handleApplyTemplate = (dsl: string) => {
+    const result = parseDiagramDSL(dsl);
+    if (result.errors.length === 0) {
+      takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
+      setNodes(result.nodes);
+      setEdges(result.edges);
+      setTimeout(() => fitView({ duration: 800 }), 50);
+    } else {
+      toast({ title: "Template parse error", variant: "destructive" });
+    }
+  };
+
+  const handleApplyDSL = (newNodes: DrawFlowNode[], newEdges: DrawFlowEdge[]) => {
+    takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
+    
+    // Preserve existing node positions where possible
+    const existingPosMap = new Map();
+    nodes.forEach(n => existingPosMap.set(n.id, n.position));
+
+    const finalNodes = newNodes.map(n => {
+      if (existingPosMap.has(n.id)) {
+        return { ...n, position: existingPosMap.get(n.id) };
+      }
+      return n;
+    });
+
+    setNodes(finalNodes);
+    setEdges(newEdges);
+  };
+
   const savedDiagrams = JSON.parse(localStorage.getItem("drawflow_diagrams") || "[]") as Diagram[];
   const selectedNodes = nodes.filter(n => n.selected);
 
@@ -397,144 +497,191 @@ export function DiagramEditorInner() {
         canRedo={canRedo}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onExport={handleExportPNG}
+        onExportPNG={handleExportPNG}
+        onExportSVG={handleExportSVG}
         onLayout={handleLayout}
         onShortcutsHelp={() => setIsShortcutsDialogOpen(true)}
         bgVariant={bgVariant === "none" ? BackgroundVariant.Dots : bgVariant}
         onCycleBgVariant={handleCycleBgVariant}
         snapToGrid={snapToGrid}
         onToggleSnap={() => setSnapToGrid(!snapToGrid)}
+        isCodePanelOpen={isCodePanelOpen}
+        onToggleCodePanel={() => setIsCodePanelOpen(!isCodePanelOpen)}
+        isAIPanelOpen={isAIPanelOpen}
+        onToggleAIPanel={() => setIsAIPanelOpen(!isAIPanelOpen)}
+        isNotesPanelOpen={isNotesPanelOpen}
+        onToggleNotesPanel={() => setIsNotesPanelOpen(!isNotesPanelOpen)}
+        onOpenTemplates={() => setIsTemplateModalOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
       
       {isPaletteVisible && <Palette />}
       
-      <div className="flex-1 w-full relative" ref={reactFlowWrapper}>
-        <ReactFlow
+      <div className="flex flex-1 overflow-hidden relative">
+        <NotesPanel 
+          isOpen={isNotesPanelOpen} 
+          onClose={() => setIsNotesPanelOpen(false)} 
+          diagramId={diagramId}
+        />
+
+        <div className="flex-1 w-full relative" ref={reactFlowWrapper}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            onConnect={onConnect}
+            onInit={setReactFlowInstance}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onNodeContextMenu={onNodeContextMenu}
+            onEdgeDoubleClick={onEdgeDoubleClick}
+            onPaneClick={() => setContextMenu(null)}
+            nodeTypes={nodeTypes}
+            snapToGrid={snapToGrid}
+            snapGrid={snapToGrid ? [20, 20] : undefined}
+            fitView
+            className="bg-[#0f1117]"
+          >
+            {bgVariant !== "none" && <Background variant={bgVariant} color="#333" gap={16} />}
+            <MiniMap 
+              nodeColor={(n) => {
+                return n.data?.accentColor as string || '#444';
+              }}
+              maskColor="rgba(0, 0, 0, 0.7)"
+              style={{ backgroundColor: '#1a1f2e' }}
+            />
+            <Controls className="bg-[#1a1f2e] border-gray-800 text-white fill-white" />
+
+            {nodes.length === 0 && (
+              <Panel position="center" className="pointer-events-none">
+                <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-700 rounded-xl bg-gray-900/50 backdrop-blur-sm">
+                  <Workflow className="w-12 h-12 text-gray-500 mb-4" />
+                  <h2 className="text-xl font-semibold text-gray-300 mb-2">Start building your diagram</h2>
+                  <p className="text-gray-500 text-sm max-w-sm text-center">Drag nodes from the palette above, or use auto-layout to get started</p>
+                </div>
+              </Panel>
+            )}
+
+            {selectedNodes.length > 0 && (
+               <Panel position="top-center" className="mt-4 pointer-events-auto">
+                 <div className="flex items-center gap-1 bg-[#1a1f2e] border border-gray-700 rounded-lg p-1.5 shadow-xl">
+                   <div className="px-2 text-xs font-medium text-gray-400 border-r border-gray-700 mr-1">
+                     {selectedNodes.length} selected
+                   </div>
+                   {selectedNodes.length === 1 && (
+                     <button 
+                       className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded transition-colors"
+                       onClick={() => handleDuplicateNode(selectedNodes[0])}
+                       title="Duplicate"
+                     >
+                       <Copy className="w-4 h-4" />
+                     </button>
+                   )}
+                   <button 
+                     className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded transition-colors"
+                     onClick={() => {
+                       takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
+                       const selectedIds = new Set(selectedNodes.map(n => n.id));
+                       setNodes(nds => nds.filter(n => !selectedIds.has(n.id)));
+                       setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
+                     }}
+                     title="Delete"
+                   >
+                     <Trash2 className="w-4 h-4" />
+                   </button>
+                 </div>
+               </Panel>
+            )}
+          </ReactFlow>
+
+          {contextMenu && (
+            <div 
+              className="absolute bg-[#1a1f2e] border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] z-50"
+              style={{ top: contextMenu.y, left: contextMenu.x }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase border-b border-gray-800 mb-1">
+                {contextMenu.node.data.label}
+              </div>
+              <button 
+                className="w-full text-left px-3 py-1.5 text-sm text-gray-200 hover:bg-blue-500/20 hover:text-blue-300 flex items-center gap-2 transition-colors"
+                onClick={() => handleDuplicateNode(contextMenu.node)}
+              >
+                <Copy className="w-4 h-4" /> Duplicate
+              </button>
+              <button 
+                className="w-full text-left px-3 py-1.5 text-sm text-gray-200 hover:bg-blue-500/20 hover:text-blue-300 flex items-center gap-2 transition-colors"
+                onClick={() => handleAddNoteToNode(contextMenu.node.id)}
+              >
+                <FileText className="w-4 h-4" /> Add Note
+              </button>
+              <div className="my-1 border-t border-gray-800" />
+              <button 
+                className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-2 transition-colors"
+                onClick={() => handleDeleteNode(contextMenu.node.id)}
+              >
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+            </div>
+          )}
+
+          {editingEdge && (
+            <div 
+              className="absolute z-50 bg-[#1a1f2e] border border-blue-500 rounded shadow-2xl p-1"
+              style={{ 
+                top: editingEdge.y, 
+                left: editingEdge.x,
+                transform: 'translate(-50%, -50%)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input 
+                autoFocus
+                className="bg-transparent text-sm text-white px-2 py-1 outline-none min-w-[120px] text-center"
+                value={editingEdge.label}
+                placeholder="Edge label..."
+                onChange={(e) => setEditingEdge({ ...editingEdge, label: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveEdgeLabel();
+                  if (e.key === 'Escape') setEditingEdge(null);
+                }}
+                onBlur={saveEdgeLabel}
+              />
+            </div>
+          )}
+        </div>
+
+        <CodePanel 
+          isOpen={isCodePanelOpen} 
+          onClose={() => setIsCodePanelOpen(false)}
           nodes={nodes}
           edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={handleEdgesChange}
-          onConnect={onConnect}
-          onInit={setReactFlowInstance}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onNodeContextMenu={onNodeContextMenu}
-          onEdgeDoubleClick={onEdgeDoubleClick}
-          onPaneClick={() => setContextMenu(null)}
-          nodeTypes={nodeTypes}
-          snapToGrid={snapToGrid}
-          snapGrid={snapToGrid ? [20, 20] : undefined}
-          fitView
-          className="bg-[#0f1117]"
-        >
-          {bgVariant !== "none" && <Background variant={bgVariant} color="#333" gap={16} />}
-          <MiniMap 
-            nodeColor={(n) => {
-              return n.data?.accentColor as string || '#444';
-            }}
-            maskColor="rgba(0, 0, 0, 0.7)"
-            style={{ backgroundColor: '#1a1f2e' }}
-          />
-          <Controls className="bg-[#1a1f2e] border-gray-800 text-white fill-white" />
-
-          {nodes.length === 0 && (
-            <Panel position="center" className="pointer-events-none">
-              <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-700 rounded-xl bg-gray-900/50 backdrop-blur-sm">
-                <Workflow className="w-12 h-12 text-gray-500 mb-4" />
-                <h2 className="text-xl font-semibold text-gray-300 mb-2">Start building your diagram</h2>
-                <p className="text-gray-500 text-sm max-w-sm text-center">Drag nodes from the palette above, or use auto-layout to get started</p>
-              </div>
-            </Panel>
-          )}
-
-          {selectedNodes.length > 0 && (
-             <Panel position="top-center" className="mt-4 pointer-events-auto">
-               <div className="flex items-center gap-1 bg-[#1a1f2e] border border-gray-700 rounded-lg p-1.5 shadow-xl">
-                 <div className="px-2 text-xs font-medium text-gray-400 border-r border-gray-700 mr-1">
-                   {selectedNodes.length} selected
-                 </div>
-                 {selectedNodes.length === 1 && (
-                   <button 
-                     className="p-1.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded transition-colors"
-                     onClick={() => handleDuplicateNode(selectedNodes[0])}
-                     title="Duplicate"
-                   >
-                     <Copy className="w-4 h-4" />
-                   </button>
-                 )}
-                 <button 
-                   className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded transition-colors"
-                   onClick={() => {
-                     takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
-                     const selectedIds = new Set(selectedNodes.map(n => n.id));
-                     setNodes(nds => nds.filter(n => !selectedIds.has(n.id)));
-                     setEdges(eds => eds.filter(e => !selectedIds.has(e.source) && !selectedIds.has(e.target)));
-                   }}
-                   title="Delete"
-                 >
-                   <Trash2 className="w-4 h-4" />
-                 </button>
-               </div>
-             </Panel>
-          )}
-        </ReactFlow>
-
-        {contextMenu && (
-          <div 
-            className="absolute bg-[#1a1f2e] border border-gray-700 rounded-lg shadow-xl py-1 min-w-[160px] z-50"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase border-b border-gray-800 mb-1">
-              {contextMenu.node.data.label}
-            </div>
-            <button 
-              className="w-full text-left px-3 py-1.5 text-sm text-gray-200 hover:bg-blue-500/20 hover:text-blue-300 flex items-center gap-2 transition-colors"
-              onClick={() => handleDuplicateNode(contextMenu.node)}
-            >
-              <Copy className="w-4 h-4" /> Duplicate
-            </button>
-            <button 
-              className="w-full text-left px-3 py-1.5 text-sm text-gray-200 hover:bg-blue-500/20 hover:text-blue-300 flex items-center gap-2 transition-colors"
-              onClick={() => handleAddNoteToNode(contextMenu.node.id)}
-            >
-              <FileText className="w-4 h-4" /> Add Note
-            </button>
-            <div className="my-1 border-t border-gray-800" />
-            <button 
-              className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-2 transition-colors"
-              onClick={() => handleDeleteNode(contextMenu.node.id)}
-            >
-              <Trash2 className="w-4 h-4" /> Delete
-            </button>
-          </div>
-        )}
-
-        {editingEdge && (
-          <div 
-            className="absolute z-50 bg-[#1a1f2e] border border-blue-500 rounded shadow-2xl p-1"
-            style={{ 
-              top: editingEdge.y, 
-              left: editingEdge.x,
-              transform: 'translate(-50%, -50%)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <input 
-              autoFocus
-              className="bg-transparent text-sm text-white px-2 py-1 outline-none min-w-[120px] text-center"
-              value={editingEdge.label}
-              placeholder="Edge label..."
-              onChange={(e) => setEditingEdge({ ...editingEdge, label: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveEdgeLabel();
-                if (e.key === 'Escape') setEditingEdge(null);
-              }}
-              onBlur={saveEdgeLabel}
-            />
-          </div>
-        )}
+          onApply={handleApplyDSL}
+        />
       </div>
+
+      <OllamaPanel 
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        onApply={(newNodes, newEdges) => {
+          handleApplyDSL(newNodes, newEdges);
+          setTimeout(() => fitView({ duration: 800 }), 50);
+        }}
+      />
+
+      <TemplateModal 
+        isOpen={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        onSelectTemplate={handleApplyTemplate}
+      />
+
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onCommand={handleCommandAction}
+        savedDiagrams={savedDiagrams}
+      />
 
       <Dialog open={isLoadDialogOpen} onOpenChange={setIsLoadDialogOpen}>
         <DialogContent className="bg-[#1a1f2e] text-white border-gray-800">
@@ -573,6 +720,7 @@ export function DiagramEditorInner() {
           </DialogHeader>
           <div className="mt-4 space-y-3">
             {[
+              { keys: ['Cmd', 'K'], desc: 'Open Command Palette' },
               { keys: ['Delete', 'Backspace'], desc: 'Delete selected nodes and edges' },
               { keys: ['Ctrl', 'A'], desc: 'Select all' },
               { keys: ['Ctrl', 'S'], desc: 'Save diagram' },

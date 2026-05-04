@@ -111,6 +111,88 @@
   --destructive-border: hsl(var(--destructive));
 }
 
+[cmdk-root] {
+  max-width: 640px;
+  width: 100%;
+  background: var(--background);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+}
+
+[cmdk-dialog] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  width: 100%;
+  max-width: 640px;
+}
+
+[cmdk-dialog]::backdrop {
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+}
+
+[cmdk-input] {
+  font-family: var(--font-sans);
+  border: none;
+  width: 100%;
+  font-size: 15px;
+  padding: 16px;
+  outline: none;
+  background: transparent;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+[cmdk-list] {
+  height: min(300px, calc(var(--cmdk-list-height)));
+  max-height: 400px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  transition: 100ms ease;
+  transition-property: height;
+  padding: 8px;
+}
+
+[cmdk-group-heading] {
+  padding: 8px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+
+[cmdk-item] {
+  content-visibility: auto;
+  cursor: pointer;
+  height: 40px;
+  border-radius: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  color: var(--foreground);
+  user-select: none;
+  transition: background 150ms ease;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+[cmdk-empty] {
+  font-size: 14px;
+  padding: 32px;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
