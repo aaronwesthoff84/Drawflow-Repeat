@@ -6,7 +6,7 @@ import {
   Database, Layers, BarChart2, List, Activity, 
   Globe2, LineChart, 
   Type, Square, Circle, Triangle,
-  Palette, MessageSquareText
+  Palette, MessageSquareText, Lock, Unlock
 } from "lucide-react";
 import { DrawFlowNodeData } from "../types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -58,7 +58,9 @@ const PRESET_COLORS = [
   { name: "gray", value: "#6b7280", bg: "bg-gray-500/10", border: "border-gray-500/30", text: "text-gray-400", header: "bg-gray-500/20 border-gray-500/30" }
 ];
 
-export const CustomNode = memo(({ id, data, isConnectable }: NodeProps<DrawFlowNodeData>) => {
+export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps) => {
+  // Cast because NodeProps<T> constraint requires T to extend Node in newer @xyflow versions
+  const data = rawData as DrawFlowNodeData;
   const [isEditing, setIsEditing] = useState(false);
   const [showNotes, setShowNotes] = useState(!!data.notes);
   const { setNodes } = useReactFlow();
@@ -66,53 +68,53 @@ export const CustomNode = memo(({ id, data, isConnectable }: NodeProps<DrawFlowN
   const Icon = icons[data.type] || Square;
   const isShape = ["box", "circle", "triangle"].includes(data.type);
   const isText = data.type === "text";
+  const isLocked = !!data.locked;
 
-  const handleDoubleClick = () => setIsEditing(true);
+  const handleDoubleClick = () => {
+    if (isLocked) return;
+    setIsEditing(true);
+  };
   const handleBlur = () => setIsEditing(false);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, label: e.target.value } } : n)));
   };
-
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, notes: e.target.value } } : n)));
   };
-
   const handleColorSelect = (colorValue: string) => {
     setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, accentColor: colorValue } } : n)));
   };
+  const handleToggleLock = () => {
+    setNodes((nds) => nds.map((n) => n.id === id
+      ? { ...n, draggable: !!n.data.locked, data: { ...n.data, locked: !n.data.locked } }
+      : n
+    ));
+  };
 
-  // Determine colors based on accentColor or category defaults
   const accentColorObj = PRESET_COLORS.find(c => c.value === data.accentColor);
   const baseClasses = accentColorObj 
     ? `${accentColorObj.bg} ${accentColorObj.border} ${accentColorObj.text}`
     : defaultCategoryColors[data.category];
-    
   const headerClasses = accentColorObj
     ? `${accentColorObj.header} ${accentColorObj.text}`
     : defaultCategoryHeaderColors[data.category];
-
   const handleClass = accentColorObj
     ? accentColorObj.bg.replace('/10', '')
     : baseClasses.split(' ')[2].replace('text-', 'bg-');
 
   if (isText) {
     return (
-      <div className="relative group">
+      <div className={`relative group ${isLocked ? "opacity-80" : ""}`}>
         <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
         {isEditing ? (
-          <input 
-            value={data.label} 
-            onChange={handleChange} 
-            onBlur={handleBlur} 
-            autoFocus 
-            className="bg-transparent border border-gray-500 rounded px-1 outline-none text-gray-300 min-w-[100px]"
-          />
+          <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-transparent border border-gray-500 rounded px-1 outline-none text-gray-300 min-w-[100px]" />
         ) : (
-          <div onDoubleClick={handleDoubleClick} className={`font-medium px-2 py-1 min-w-[50px] min-h-[24px] cursor-text ${data.accentColor ? `text-[${data.accentColor}]` : 'text-gray-300'}`} style={{ color: data.accentColor }}>
+          <div onDoubleClick={handleDoubleClick} className={`font-medium px-2 py-1 min-w-[50px] min-h-[24px] cursor-text ${data.accentColor ? '' : 'text-gray-300'}`} style={{ color: data.accentColor }}>
             {data.label}
           </div>
         )}
         <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
+        {isLocked && <Lock className="absolute -top-2 -right-2 w-3 h-3 text-yellow-400" />}
       </div>
     );
   }
@@ -123,69 +125,59 @@ export const CustomNode = memo(({ id, data, isConnectable }: NodeProps<DrawFlowN
     if (data.type === "circle") shapeClass = "rounded-full";
     if (data.type === "triangle") {
       return (
-        <div className="relative group flex items-center justify-center min-w-[100px] min-h-[100px]">
-           <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400 -ml-2" />
-           
-           <div className={`absolute inset-0 w-0 h-0 border-l-[50px] border-l-transparent border-b-[86.6px] ${data.accentColor ? '' : 'border-b-gray-800'} border-r-[50px] border-r-transparent`} style={data.accentColor ? { borderBottomColor: data.accentColor } : {}}></div>
-           
-           <div className="z-10 mt-8">
-             {isEditing ? (
-               <input 
-                 value={data.label} 
-                 onChange={handleChange} 
-                 onBlur={handleBlur} 
-                 autoFocus 
-                 className="bg-gray-900/80 border border-gray-500 rounded px-1 outline-none text-gray-300 w-[70px] text-center text-sm"
-               />
-             ) : (
-               <div onDoubleClick={handleDoubleClick} className="text-gray-100 font-medium cursor-text text-sm max-w-[80px] text-center truncate">
-                 {data.label}
-               </div>
-             )}
-           </div>
-
-           <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400 -mr-2" />
+        <div className={`relative group flex items-center justify-center min-w-[100px] min-h-[100px] ${isLocked ? "opacity-80" : ""}`}>
+          <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400 -ml-2" />
+          <div className={`absolute inset-0 w-0 h-0 border-l-[50px] border-l-transparent border-b-[86.6px] ${data.accentColor ? '' : 'border-b-gray-800'} border-r-[50px] border-r-transparent`} style={data.accentColor ? { borderBottomColor: data.accentColor } : {}} />
+          <div className="z-10 mt-8">
+            {isEditing ? (
+              <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-gray-900/80 border border-gray-500 rounded px-1 outline-none text-gray-300 w-[70px] text-center text-sm" />
+            ) : (
+              <div onDoubleClick={handleDoubleClick} className="text-gray-100 font-medium cursor-text text-sm max-w-[80px] text-center truncate">{data.label}</div>
+            )}
+          </div>
+          <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400 -mr-2" />
+          {isLocked && <Lock className="absolute top-1 right-1 w-3 h-3 text-yellow-400 z-20" />}
         </div>
-      )
+      );
     }
 
     return (
-      <div className={`relative group flex items-center justify-center min-w-[100px] min-h-[100px] bg-gray-800/80 border shadow-md ${shapeClass}`} style={data.accentColor ? { borderColor: data.accentColor, backgroundColor: `${data.accentColor}20` } : { borderColor: '#4b5563' }}>
+      <div className={`relative group flex items-center justify-center min-w-[100px] min-h-[100px] bg-gray-800/80 border shadow-md ${shapeClass} ${isLocked ? "opacity-80" : ""}`} style={data.accentColor ? { borderColor: data.accentColor, backgroundColor: `${data.accentColor}20` } : { borderColor: '#4b5563' }}>
         <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
-        
         <div className="z-10 px-2">
           {isEditing ? (
-            <input 
-              value={data.label} 
-              onChange={handleChange} 
-              onBlur={handleBlur} 
-              autoFocus 
-              className="bg-gray-900/80 border border-gray-500 rounded px-1 outline-none text-gray-300 w-full text-center text-sm"
-            />
+            <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-gray-900/80 border border-gray-500 rounded px-1 outline-none text-gray-300 w-full text-center text-sm" />
           ) : (
-            <div onDoubleClick={handleDoubleClick} className="text-gray-100 font-medium cursor-text text-sm max-w-[120px] text-center truncate">
-              {data.label}
-            </div>
+            <div onDoubleClick={handleDoubleClick} className="text-gray-100 font-medium cursor-text text-sm max-w-[120px] text-center truncate">{data.label}</div>
           )}
         </div>
-
         <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
+        {isLocked && <Lock className="absolute top-1 right-1 w-3 h-3 text-yellow-400 z-20" />}
       </div>
     );
   }
 
-  // Standard cards
+  // Standard card
   return (
-    <div className={`min-w-[180px] rounded-lg border bg-[#151923] shadow-lg overflow-hidden group ${baseClasses.split(' ')[1]}`}>
+    <div className={`min-w-[180px] rounded-lg border bg-[#151923] shadow-lg overflow-hidden group ${baseClasses.split(' ')[1]} ${isLocked ? "ring-1 ring-yellow-500/30" : ""}`}>
       <Handle type="target" position={Position.Left} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -ml-1 ${handleClass}`} />
       
       <div className={`flex items-center justify-between px-3 py-2 border-b ${headerClasses}`}>
         <div className="flex items-center gap-2">
           <Icon size={14} />
           <span className="text-xs font-semibold uppercase tracking-wider">{data.type}</span>
+          {isLocked && <Lock size={10} className="text-yellow-400 ml-1" />}
         </div>
         
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            className={`p-1 hover:bg-black/20 rounded cursor-pointer ${isLocked ? "text-yellow-400" : ""}`}
+            onClick={handleToggleLock}
+            title={isLocked ? "Unlock node" : "Lock node"}
+          >
+            {isLocked ? <Unlock size={12} /> : <Lock size={12} />}
+          </button>
+
           <Popover>
             <PopoverTrigger asChild>
               <button className="p-1 hover:bg-black/20 rounded cursor-pointer" title="Change Color">
@@ -195,30 +187,16 @@ export const CustomNode = memo(({ id, data, isConnectable }: NodeProps<DrawFlowN
             <PopoverContent className="w-auto p-2 bg-[#1a1f2e] border-gray-700" align="start">
               <div className="flex flex-wrap gap-1 w-[100px]">
                 {PRESET_COLORS.map(color => (
-                  <button
-                    key={color.name}
-                    className={`w-5 h-5 rounded-full border border-gray-600 hover:scale-110 transition-transform ${data.accentColor === color.value ? 'ring-2 ring-white' : ''}`}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => handleColorSelect(color.value)}
-                    title={color.name}
-                  />
+                  <button key={color.name} className={`w-5 h-5 rounded-full border border-gray-600 hover:scale-110 transition-transform ${data.accentColor === color.value ? 'ring-2 ring-white' : ''}`} style={{ backgroundColor: color.value }} onClick={() => handleColorSelect(color.value)} title={color.name} />
                 ))}
-                <button
-                  className={`w-5 h-5 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center hover:scale-110 transition-transform ${!data.accentColor ? 'ring-2 ring-white' : ''}`}
-                  onClick={() => setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, accentColor: undefined } } : n))}
-                  title="Default"
-                >
+                <button className={`w-5 h-5 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center hover:scale-110 transition-transform ${!data.accentColor ? 'ring-2 ring-white' : ''}`} onClick={() => setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, accentColor: undefined } } : n))} title="Default">
                   <span className="text-[8px]">↺</span>
                 </button>
               </div>
             </PopoverContent>
           </Popover>
           
-          <button 
-            className={`p-1 hover:bg-black/20 rounded cursor-pointer ${showNotes ? 'bg-black/20' : ''}`} 
-            onClick={() => setShowNotes(!showNotes)}
-            title="Notes"
-          >
+          <button className={`p-1 hover:bg-black/20 rounded cursor-pointer ${showNotes ? 'bg-black/20' : ''}`} onClick={() => setShowNotes(!showNotes)} title="Notes">
             <MessageSquareText size={12} />
           </button>
         </div>
@@ -226,16 +204,9 @@ export const CustomNode = memo(({ id, data, isConnectable }: NodeProps<DrawFlowN
       
       <div className="p-3">
         {isEditing ? (
-          <input 
-            value={data.label} 
-            onChange={handleChange} 
-            onBlur={handleBlur} 
-            autoFocus 
-            className="bg-[#0f1117] border border-gray-700 rounded px-2 py-1 outline-none text-white w-full text-sm"
-            placeholder="Add label..."
-          />
+          <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-[#0f1117] border border-gray-700 rounded px-2 py-1 outline-none text-white w-full text-sm" placeholder="Add label..." />
         ) : (
-          <div onDoubleClick={handleDoubleClick} className="text-gray-200 text-sm cursor-text min-h-[24px]">
+          <div onDoubleClick={handleDoubleClick} className={`text-gray-200 text-sm min-h-[24px] ${isLocked ? "" : "cursor-text"}`}>
             {data.label || <span className="text-gray-500 italic">Add label...</span>}
           </div>
         )}
@@ -247,7 +218,7 @@ export const CustomNode = memo(({ id, data, isConnectable }: NodeProps<DrawFlowN
               placeholder="Add notes..."
               value={data.notes || ''}
               onChange={handleNotesChange}
-              onKeyDown={(e) => e.stopPropagation()} // Prevent triggering global shortcuts
+              onKeyDown={(e) => e.stopPropagation()}
             />
           </div>
         )}

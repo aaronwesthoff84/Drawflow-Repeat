@@ -15,6 +15,7 @@ export interface DrawFlowNodeData extends Record<string, unknown> {
   category: NodeCategory;
   accentColor?: string;
   notes?: string;
+  locked?: boolean;
 }
 
 export type DrawFlowNode = Node<DrawFlowNodeData, "custom">;

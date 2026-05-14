@@ -15,6 +15,7 @@ import {
   MarkerType,
   BackgroundVariant,
   useReactFlow,
+  type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { CustomNode } from "./CustomNode";
@@ -29,17 +30,17 @@ import {
   Workflow, Copy, Trash2, FileText,
   Globe, Smartphone, User, Zap, Server, Cpu,
   Database, Layers, List, Activity, Globe2, LineChart,
-  X, Search, ChevronUp, ChevronDown, Monitor,
+  X, Search, ChevronUp, ChevronDown, Monitor, Lock, Unlock,
 } from "lucide-react";
 import { CodePanel } from "./CodePanel";
-import { OllamaPanel } from "./OllamaPanel";
+import { AIPanel } from "./AIPanel";
 import { NotesPanel } from "./NotesPanel";
 import { CommandPalette } from "./CommandPalette";
 import { TemplateModal } from "./TemplateModal";
 import { parseDiagramDSL } from "../lib/diagramParser";
 import { exportToMermaid } from "../lib/mermaidExporter";
 
-const nodeTypes = { custom: CustomNode };
+const nodeTypes: NodeTypes = { custom: CustomNode as NodeTypes[string] };
 
 const initialNodes: DrawFlowNode[] = [];
 const initialEdges: Edge[] = [];
@@ -151,13 +152,8 @@ export function DiagramEditorInner() {
 
   const onConnect = useCallback((params: Connection | Edge) => {
     takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
-    setEdges(eds => addEdge({
-      ...params,
-      type: "smoothstep",
-      animated: true,
-      markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: "#8b949e" },
-      style: { stroke: "#8b949e", strokeWidth: 2 },
-    }, eds));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setEdges(eds => addEdge({ ...params, type: "smoothstep", animated: true, markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: "#8b949e" }, style: { stroke: "#8b949e", strokeWidth: 2 } } as any, eds));
   }, [setEdges, takeSnapshot, getNodes, getEdges]);
 
   const handleUndo = useCallback(() => {
@@ -409,8 +405,13 @@ export function DiagramEditorInner() {
   };
 
   const handleLoad = (diagram: Diagram) => {
-    setNodes(diagram.nodes || []); setEdges(diagram.edges || []);
-    setDiagramName(diagram.name); setDiagramId(diagram.id);
+    // Re-sync draggable with locked state when loading
+    const loadedNodes = (diagram.nodes || []).map(n => ({
+      ...n,
+      draggable: n.data.locked ? false : undefined,
+    }));
+    setNodes(loadedNodes); setEdges(diagram.edges || []);
+    setDiagramName(diagram.name); setDiagramId(diagram.id as any);
     setIsLoadDialogOpen(false); clearHistory();
   };
 
@@ -480,6 +481,14 @@ export function DiagramEditorInner() {
 
   const handleAddNoteToNode = useCallback((nodeId: string) => {
     setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, notes: n.data.notes || " " } } : n));
+    setContextMenu(null);
+  }, [setNodes]);
+
+  const handleLockNode = useCallback((nodeId: string) => {
+    setNodes(nds => nds.map(n => n.id === nodeId
+      ? { ...n, draggable: !!n.data.locked, data: { ...n.data, locked: !n.data.locked } }
+      : n
+    ));
     setContextMenu(null);
   }, [setNodes]);
 
@@ -659,7 +668,7 @@ export function DiagramEditorInner() {
             <Controls className="bg-[#1a1f2e] border-gray-800 text-white fill-white" />
 
             {nodes.length === 0 && (
-              <Panel position="center" className="pointer-events-none">
+              <Panel position="top-center" className="pointer-events-none" style={{ top: "40%" }}>
                 <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-700 rounded-xl bg-gray-900/50 backdrop-blur-sm">
                   <Workflow className="w-12 h-12 text-gray-500 mb-4" />
                   <h2 className="text-xl font-semibold text-gray-300 mb-2">Start building your diagram</h2>
@@ -707,6 +716,19 @@ export function DiagramEditorInner() {
               </button>
               <button className="w-full text-left px-3 py-1.5 text-sm text-gray-200 hover:bg-blue-500/20 hover:text-blue-300 flex items-center gap-2" onClick={() => handleAddNoteToNode(contextMenu.node.id)}>
                 <FileText className="w-4 h-4" /> Add Note
+              </button>
+              <button
+                className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors ${
+                  contextMenu.node.data.locked
+                    ? "text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300"
+                    : "text-gray-200 hover:bg-yellow-500/10 hover:text-yellow-300"
+                }`}
+                onClick={() => handleLockNode(contextMenu.node.id)}
+              >
+                {contextMenu.node.data.locked
+                  ? <><Unlock className="w-4 h-4" /> Unlock Node</>
+                  : <><Lock className="w-4 h-4" /> Lock Node</>
+                }
               </button>
               <div className="my-1 border-t border-gray-800" />
               <button className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-2" onClick={() => handleDeleteNode(contextMenu.node.id)}>
@@ -839,9 +861,12 @@ export function DiagramEditorInner() {
         <CodePanel isOpen={isCodePanelOpen} onClose={() => setIsCodePanelOpen(false)} nodes={nodes} edges={edges} onApply={handleApplyDSL} />
       </div>
 
-      <OllamaPanel
-        isOpen={isAIPanelOpen} onClose={() => setIsAIPanelOpen(false)}
-        onApply={(newNodes, newEdges) => { handleApplyDSL(newNodes, newEdges); setTimeout(() => fitView({ duration: 800 }), 50); }}
+      <AIPanel
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        onApply={(newNodes, newEdges, dsl) => { handleApplyDSL(newNodes, newEdges); setTimeout(() => fitView({ duration: 800 }), 50); }}
+        nodes={nodes}
+        edges={edges}
       />
 
       <TemplateModal isOpen={isTemplateModalOpen} onClose={() => setIsTemplateModalOpen(false)} onSelectTemplate={handleApplyTemplate} />
