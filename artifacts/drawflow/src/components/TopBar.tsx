@@ -5,7 +5,7 @@ import {
   Undo2, Redo2, ImageDown, Keyboard, LayoutGrid,
   Grid3X3, AlignJustify, Crosshair, Ban, Magnet,
   Code2, Sparkles, NotebookPen, LayoutTemplate, Command,
-  Monitor, FileInput, GitBranch,
+  Monitor, FileInput, GitBranch, Map,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useReactFlow, BackgroundVariant } from "@xyflow/react";
@@ -43,6 +43,8 @@ interface TopBarProps {
   onOpenTemplates: () => void;
   onOpenCommandPalette: () => void;
   onTogglePresentation: () => void;
+  isMinimapVisible: boolean;
+  onToggleMinimap: () => void;
 }
 
 const bgIcons = {
@@ -58,7 +60,7 @@ export function TopBar({
   onLayout, onShortcutsHelp, bgVariant, onCycleBgVariant, snapToGrid, onToggleSnap,
   isCodePanelOpen, onToggleCodePanel, isAIPanelOpen, onToggleAIPanel,
   isNotesPanelOpen, onToggleNotesPanel, onOpenTemplates, onOpenCommandPalette,
-  onTogglePresentation,
+  onTogglePresentation, isMinimapVisible, onToggleMinimap,
 }: TopBarProps) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const BgIcon = bgVariant ? bgIcons[bgVariant] : bgIcons.none;
@@ -138,6 +140,9 @@ export function TopBar({
 
         <Button variant="ghost" size="icon" onClick={onTogglePresentation} className="text-gray-300 hover:text-white hover:bg-gray-800" title="Presentation Mode">
           <Monitor className="w-4 h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={onToggleMinimap} className={`text-gray-300 hover:text-white hover:bg-gray-800 ${isMinimapVisible ? "bg-gray-800 text-blue-400" : ""}`} title="Toggle Minimap">
+          <Map className="w-4 h-4" />
         </Button>
         <Button variant="ghost" size="icon" onClick={onLayout} className="text-gray-300 hover:text-white hover:bg-gray-800" title="Auto Layout">
           <LayoutGrid className="w-4 h-4" />

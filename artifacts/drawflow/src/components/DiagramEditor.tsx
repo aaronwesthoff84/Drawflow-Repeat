@@ -98,6 +98,7 @@ export function DiagramEditorInner() {
   const [quickAddMenu, setQuickAddMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null);
   const [edgeContextMenu, setEdgeContextMenu] = useState<{ x: number; y: number; edge: Edge } | null>(null);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [isMinimapVisible, setIsMinimapVisible] = useState(true);
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState("");
   const [findIndex, setFindIndex] = useState(0);
@@ -609,6 +610,8 @@ export function DiagramEditorInner() {
         onOpenTemplates={() => setIsTemplateModalOpen(true)}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         onTogglePresentation={handleTogglePresentation}
+        isMinimapVisible={isMinimapVisible}
+        onToggleMinimap={() => setIsMinimapVisible(p => !p)}
       />
 
       {/* Find / Search bar */}
@@ -664,7 +667,7 @@ export function DiagramEditorInner() {
             fitView className="bg-[#0f1117]"
           >
             {bgVariant !== "none" && <Background variant={bgVariant} color="#333" gap={16} />}
-            <MiniMap nodeColor={n => (n.data?.accentColor as string) || "#444"} maskColor="rgba(0,0,0,0.7)" style={{ backgroundColor: "#1a1f2e" }} />
+            {isMinimapVisible && <MiniMap nodeColor={n => (n.data?.accentColor as string) || "#444"} maskColor="rgba(0,0,0,0.7)" style={{ backgroundColor: "#1a1f2e" }} />}
             <Controls className="bg-[#1a1f2e] border-gray-800 text-white fill-white" />
 
             {nodes.length === 0 && (
