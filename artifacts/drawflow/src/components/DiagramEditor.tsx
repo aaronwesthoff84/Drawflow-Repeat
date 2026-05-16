@@ -16,6 +16,7 @@ import {
   BackgroundVariant,
   useReactFlow,
   type NodeTypes,
+  type EdgeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { CustomNode } from "./CustomNode";
@@ -39,8 +40,10 @@ import { CommandPalette } from "./CommandPalette";
 import { TemplateModal } from "./TemplateModal";
 import { parseDiagramDSL } from "../lib/diagramParser";
 import { exportToMermaid } from "../lib/mermaidExporter";
+import { EditableEdge } from "./EditableEdge";
 
 const nodeTypes: NodeTypes = { custom: CustomNode as NodeTypes[string] };
+const edgeTypes: EdgeTypes = { editable: EditableEdge as EdgeTypes[string] };
 
 const initialNodes: DrawFlowNode[] = [];
 const initialEdges: Edge[] = [];
@@ -154,7 +157,7 @@ export function DiagramEditorInner() {
   const onConnect = useCallback((params: Connection | Edge) => {
     takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setEdges(eds => addEdge({ ...params, type: "smoothstep", animated: true, markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: "#8b949e" }, style: { stroke: "#8b949e", strokeWidth: 2 } } as any, eds));
+    setEdges(eds => addEdge({ ...params, type: "editable", animated: true, markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: "#8b949e" }, style: { stroke: "#8b949e", strokeWidth: 2 }, data: { waypoints: [] } } as any, eds));
   }, [setEdges, takeSnapshot, getNodes, getEdges]);
 
   const handleUndo = useCallback(() => {
@@ -569,7 +572,7 @@ export function DiagramEditorInner() {
             nodes={nodes} edges={edges}
             onNodesChange={handleNodesChange} onEdgesChange={handleEdgesChange}
             onConnect={onConnect} onInit={setReactFlowInstance}
-            nodeTypes={nodeTypes}
+            nodeTypes={nodeTypes} edgeTypes={edgeTypes}
             snapToGrid={snapToGrid} snapGrid={snapToGrid ? [20, 20] : undefined}
             className="bg-[#0f1117]"
           >
@@ -662,7 +665,7 @@ export function DiagramEditorInner() {
             onEdgeContextMenu={onEdgeContextMenu}
             onEdgeDoubleClick={onEdgeDoubleClick}
             onPaneClick={closeAllMenus}
-            nodeTypes={nodeTypes}
+            nodeTypes={nodeTypes} edgeTypes={edgeTypes}
             snapToGrid={snapToGrid} snapGrid={snapToGrid ? [20, 20] : undefined}
             fitView className="bg-[#0f1117]"
           >
