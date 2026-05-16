@@ -5,9 +5,10 @@ export type NodeType =
   | "api" | "service" | "worker" 
   | "db" | "cache" | "dw" | "queue" | "stream" 
   | "external" | "metrics" 
-  | "text" | "box" | "circle" | "triangle";
+  | "text" | "box" | "circle" | "triangle"
+  | "diamond" | "hexagon" | "cylinder" | "parallelogram" | "cloud" | "star" | "oval";
 
-export type NodeCategory = "frontend" | "backend" | "data" | "infra" | "utils";
+export type NodeCategory = "frontend" | "backend" | "data" | "infra" | "utils" | "shapes";
 
 export interface DrawFlowNodeData extends Record<string, unknown> {
   label: string;

@@ -4,7 +4,9 @@ import {
   Zap, Server, Cpu, 
   Database, Layers, BarChart2, List, Activity, 
   Globe2, LineChart, 
-  Type, Square, Circle, Triangle 
+  Type, Square, Circle, Triangle,
+  Diamond, Hexagon, Cylinder, Cloud,
+  Star, Minus
 } from "lucide-react";
 import { NodeType, NodeCategory } from "../types";
 
@@ -56,14 +58,21 @@ const nodeCategories: {
     ]
   },
   {
-    id: "utils",
-    name: "Utils",
+    id: "shapes",
+    name: "Shapes",
     color: "gray",
     items: [
       { type: "text", name: "Text", icon: Type },
       { type: "box", name: "Box", icon: Square },
       { type: "circle", name: "Circle", icon: Circle },
+      { type: "oval", name: "Oval", icon: Minus },
       { type: "triangle", name: "Triangle", icon: Triangle },
+      { type: "diamond", name: "Diamond", icon: Diamond },
+      { type: "hexagon", name: "Hexagon", icon: Hexagon },
+      { type: "cylinder", name: "Cylinder", icon: Cylinder },
+      { type: "parallelogram", name: "Parallelogram", icon: Square },
+      { type: "cloud", name: "Cloud", icon: Cloud },
+      { type: "star", name: "Star", icon: Star },
     ]
   }
 ];
@@ -86,20 +95,21 @@ export function Palette() {
   return (
     <div className="bg-[#151923] border-b border-[#2a3040] p-3 flex gap-6 overflow-x-auto overflow-y-hidden shrink-0 z-10">
       {nodeCategories.map((category) => (
-        <div key={category.id} className="flex flex-col gap-2">
+        <div key={category.id} className="flex flex-col gap-2 shrink-0">
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500 pl-1">
             {category.name}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 flex-wrap max-w-[260px]">
             {category.items.map((item) => (
               <div
                 key={item.type}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border cursor-grab active:cursor-grabbing transition-colors ${colorClasses[category.color as keyof typeof colorClasses]}`}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded border cursor-grab active:cursor-grabbing transition-colors text-xs font-medium ${colorClasses[category.color as keyof typeof colorClasses]}`}
                 draggable
                 onDragStart={(e) => onDragStart(e, item.type, category.id)}
+                title={item.name}
               >
-                <item.icon size={14} />
-                <span className="text-xs font-medium">{item.name}</span>
+                <item.icon size={13} />
+                <span>{item.name}</span>
               </div>
             ))}
           </div>

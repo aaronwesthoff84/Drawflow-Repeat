@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "3nHDR9t0YwEuC0JwqeOSz"
+uri = "file://README.md"
+type = "text"
+title = "README.md — ready for GitHub"
+
+[[outputs]]
+id = "fnJO4x87FXKNTrKVNEQfx"
+uri = "file://PLANNING.md"
+type = "text"
+title = "PLANNING.md — 20 feature suggestions"

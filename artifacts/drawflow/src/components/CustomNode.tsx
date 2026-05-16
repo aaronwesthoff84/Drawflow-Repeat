@@ -6,12 +6,13 @@ import {
   Database, Layers, BarChart2, List, Activity, 
   Globe2, LineChart, 
   Type, Square, Circle, Triangle,
+  Diamond, Hexagon, Cylinder, CloudIcon,
   Palette, MessageSquareText, Lock, Unlock
 } from "lucide-react";
 import { DrawFlowNodeData } from "../types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const icons = {
+const icons: Record<string, React.ElementType> = {
   web: Globe,
   mobile: Smartphone,
   user: User,
@@ -29,6 +30,13 @@ const icons = {
   box: Square,
   circle: Circle,
   triangle: Triangle,
+  diamond: Diamond,
+  hexagon: Hexagon,
+  cylinder: Cylinder,
+  parallelogram: Square,
+  cloud: CloudIcon,
+  star: Square,
+  oval: Circle,
 };
 
 const defaultCategoryColors = {
@@ -37,6 +45,7 @@ const defaultCategoryColors = {
   data: "bg-amber-500/10 border-amber-500/30 text-amber-400",
   infra: "bg-purple-500/10 border-purple-500/30 text-purple-400",
   utils: "bg-gray-500/10 border-gray-500/30 text-gray-400",
+  shapes: "bg-gray-500/10 border-gray-500/30 text-gray-400",
 };
 
 const defaultCategoryHeaderColors = {
@@ -45,6 +54,7 @@ const defaultCategoryHeaderColors = {
   data: "bg-amber-500/20 border-b border-amber-500/30 text-amber-400",
   infra: "bg-purple-500/20 border-b border-purple-500/30 text-purple-400",
   utils: "bg-gray-500/20 border-b border-gray-500/30 text-gray-400",
+  shapes: "bg-gray-500/20 border-b border-gray-500/30 text-gray-400",
 };
 
 const PRESET_COLORS = [
@@ -58,22 +68,139 @@ const PRESET_COLORS = [
   { name: "gray", value: "#6b7280", bg: "bg-gray-500/10", border: "border-gray-500/30", text: "text-gray-400", header: "bg-gray-500/20 border-gray-500/30" }
 ];
 
+const SVG_SHAPES = ["triangle", "diamond", "hexagon", "cylinder", "parallelogram", "cloud", "star", "oval", "circle"];
+
+function ShapeLabel({ isEditing, label, accentColor, handleDoubleClick, handleChange, handleBlur }: {
+  isEditing: boolean; label: string; accentColor?: string;
+  handleDoubleClick: () => void;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleBlur: () => void;
+}) {
+  if (isEditing) {
+    return <input value={label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-gray-900/80 border border-gray-500 rounded px-1 outline-none text-gray-300 text-center text-sm w-[90px]" />;
+  }
+  return (
+    <div onDoubleClick={handleDoubleClick} className="text-gray-100 font-medium cursor-text text-sm text-center max-w-[110px] truncate" style={accentColor ? { color: accentColor } : {}}>
+      {label || <span className="text-gray-500 italic text-xs">label</span>}
+    </div>
+  );
+}
+
+function DiamondShape({ color, size = 100 }: { color?: string; size?: number }) {
+  const s = size;
+  const half = s / 2;
+  return (
+    <svg width={s + 4} height={s + 4} style={{ overflow: "visible" }}>
+      <polygon
+        points={`${half + 2},2 ${s + 2},${half + 2} ${half + 2},${s + 2} 2,${half + 2}`}
+        fill={color ? `${color}20` : "#1f2937"}
+        stroke={color || "#4b5563"}
+        strokeWidth={1.5}
+      />
+    </svg>
+  );
+}
+
+function HexagonShape({ color, w = 110, h = 80 }: { color?: string; w?: number; h?: number }) {
+  const pad = 2;
+  const cx = w / 2 + pad;
+  const cy = h / 2 + pad;
+  const rx = w / 2;
+  const ry = h / 2;
+  const pts = Array.from({ length: 6 }, (_, i) => {
+    const angle = (Math.PI / 180) * (60 * i - 30);
+    return `${cx + rx * Math.cos(angle)},${cy + ry * Math.sin(angle)}`;
+  }).join(" ");
+  return (
+    <svg width={w + pad * 2} height={h + pad * 2} style={{ overflow: "visible" }}>
+      <polygon points={pts} fill={color ? `${color}20` : "#1f2937"} stroke={color || "#4b5563"} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+function CylinderShape({ color, w = 110, h = 80 }: { color?: string; w?: number; h?: number }) {
+  const rx = w / 2;
+  const ry = 12;
+  const pad = 2;
+  const fillColor = color ? `${color}20` : "#1f2937";
+  const strokeColor = color || "#4b5563";
+  return (
+    <svg width={w + pad * 2} height={h + pad * 2} style={{ overflow: "visible" }}>
+      <rect x={pad} y={ry + pad} width={w} height={h - ry} fill={fillColor} stroke={strokeColor} strokeWidth={1.5} />
+      <ellipse cx={rx + pad} cy={ry + pad} rx={rx} ry={ry} fill={fillColor} stroke={strokeColor} strokeWidth={1.5} />
+      <path d={`M ${pad} ${ry + pad} Q ${rx + pad} ${ry * 2 + pad} ${w + pad} ${ry + pad}`} fill={fillColor} stroke={strokeColor} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+function ParallelogramShape({ color, w = 120, h = 60 }: { color?: string; w?: number; h?: number }) {
+  const skew = 18;
+  const pad = 2;
+  const pts = `${skew + pad},${pad} ${w + pad},${pad} ${w - skew + pad},${h + pad} ${pad},${h + pad}`;
+  return (
+    <svg width={w + pad * 2} height={h + pad * 2} style={{ overflow: "visible" }}>
+      <polygon points={pts} fill={color ? `${color}20` : "#1f2937"} stroke={color || "#4b5563"} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+function CloudShape({ color, w = 120, h = 80 }: { color?: string; w?: number; h?: number }) {
+  const fillColor = color ? `${color}20` : "#1f2937";
+  const strokeColor = color || "#4b5563";
+  const pad = 4;
+  const cx = w / 2 + pad;
+  const cy = h / 2 + pad;
+  const path = `M ${cx - 35},${cy + 20} 
+    a 20,20 0 0 1 -5,-38 
+    a 25,25 0 0 1 48,-5 
+    a 20,20 0 0 1 2,43 z`;
+  return (
+    <svg width={w + pad * 2} height={h + pad * 2} style={{ overflow: "visible" }}>
+      <path d={path} fill={fillColor} stroke={strokeColor} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+function StarShape({ color, size = 90 }: { color?: string; size?: number }) {
+  const pad = 4;
+  const cx = size / 2 + pad;
+  const cy = size / 2 + pad;
+  const outerR = size / 2;
+  const innerR = size / 4;
+  const points = Array.from({ length: 10 }, (_, i) => {
+    const angle = (Math.PI / 180) * (36 * i - 90);
+    const r = i % 2 === 0 ? outerR : innerR;
+    return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`;
+  }).join(" ");
+  return (
+    <svg width={size + pad * 2} height={size + pad * 2} style={{ overflow: "visible" }}>
+      <polygon points={points} fill={color ? `${color}20` : "#1f2937"} stroke={color || "#4b5563"} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+function OvalShape({ color, w = 130, h = 70 }: { color?: string; w?: number; h?: number }) {
+  const pad = 2;
+  return (
+    <svg width={w + pad * 2} height={h + pad * 2} style={{ overflow: "visible" }}>
+      <ellipse cx={w / 2 + pad} cy={h / 2 + pad} rx={w / 2} ry={h / 2} fill={color ? `${color}20` : "#1f2937"} stroke={color || "#4b5563"} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
 export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps) => {
-  // Cast because NodeProps<T> constraint requires T to extend Node in newer @xyflow versions
   const data = rawData as DrawFlowNodeData;
   const [isEditing, setIsEditing] = useState(false);
   const [showNotes, setShowNotes] = useState(!!data.notes);
   const { setNodes } = useReactFlow();
 
   const Icon = icons[data.type] || Square;
-  const isShape = ["box", "circle", "triangle"].includes(data.type);
+  const isSvgShape = SVG_SHAPES.includes(data.type);
   const isText = data.type === "text";
+  const isBox = data.type === "box";
   const isLocked = !!data.locked;
 
-  const handleDoubleClick = () => {
-    if (isLocked) return;
-    setIsEditing(true);
-  };
+  const handleDoubleClick = () => { if (isLocked) return; setIsEditing(true); };
   const handleBlur = () => setIsEditing(false);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNodes((nds) => nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, label: e.target.value } } : n)));
@@ -92,89 +219,107 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
   };
 
   const accentColorObj = PRESET_COLORS.find(c => c.value === data.accentColor);
-  const baseClasses = accentColorObj 
+  const baseClasses = accentColorObj
     ? `${accentColorObj.bg} ${accentColorObj.border} ${accentColorObj.text}`
-    : defaultCategoryColors[data.category];
+    : defaultCategoryColors[data.category] || defaultCategoryColors.utils;
   const headerClasses = accentColorObj
     ? `${accentColorObj.header} ${accentColorObj.text}`
-    : defaultCategoryHeaderColors[data.category];
+    : defaultCategoryHeaderColors[data.category] || defaultCategoryHeaderColors.utils;
   const handleClass = accentColorObj
     ? accentColorObj.bg.replace('/10', '')
-    : baseClasses.split(' ')[2].replace('text-', 'bg-');
+    : baseClasses.split(' ')[2]?.replace('text-', 'bg-') || "bg-gray-400";
+
+  const sharedHandles = (
+    <>
+      <Handle type="target" position={Position.Top} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" style={{ left: "50%" }} />
+      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
+      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" style={{ left: "50%" }} />
+      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
+    </>
+  );
 
   if (isText) {
     return (
       <div className={`relative group ${isLocked ? "opacity-80" : ""}`}>
-        <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
+        {sharedHandles}
         {isEditing ? (
           <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-transparent border border-gray-500 rounded px-1 outline-none text-gray-300 min-w-[100px]" />
         ) : (
-          <div onDoubleClick={handleDoubleClick} className={`font-medium px-2 py-1 min-w-[50px] min-h-[24px] cursor-text ${data.accentColor ? '' : 'text-gray-300'}`} style={{ color: data.accentColor }}>
+          <div onDoubleClick={handleDoubleClick} className="font-medium px-2 py-1 min-w-[50px] min-h-[24px] cursor-text" style={{ color: data.accentColor || "#d1d5db" }}>
             {data.label}
           </div>
         )}
-        <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
         {isLocked && <Lock className="absolute -top-2 -right-2 w-3 h-3 text-yellow-400" />}
       </div>
     );
   }
 
-  if (isShape) {
-    let shapeClass = "";
-    if (data.type === "box") shapeClass = "rounded-md";
-    if (data.type === "circle") shapeClass = "rounded-full";
-    if (data.type === "triangle") {
-      return (
-        <div className={`relative group flex items-center justify-center min-w-[100px] min-h-[100px] ${isLocked ? "opacity-80" : ""}`}>
-          <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400 -ml-2" />
-          <div className={`absolute inset-0 w-0 h-0 border-l-[50px] border-l-transparent border-b-[86.6px] ${data.accentColor ? '' : 'border-b-gray-800'} border-r-[50px] border-r-transparent`} style={data.accentColor ? { borderBottomColor: data.accentColor } : {}} />
-          <div className="z-10 mt-8">
-            {isEditing ? (
-              <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-gray-900/80 border border-gray-500 rounded px-1 outline-none text-gray-300 w-[70px] text-center text-sm" />
-            ) : (
-              <div onDoubleClick={handleDoubleClick} className="text-gray-100 font-medium cursor-text text-sm max-w-[80px] text-center truncate">{data.label}</div>
-            )}
-          </div>
-          <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400 -mr-2" />
-          {isLocked && <Lock className="absolute top-1 right-1 w-3 h-3 text-yellow-400 z-20" />}
-        </div>
-      );
-    }
-
+  if (isBox) {
     return (
-      <div className={`relative group flex items-center justify-center min-w-[100px] min-h-[100px] bg-gray-800/80 border shadow-md ${shapeClass} ${isLocked ? "opacity-80" : ""}`} style={data.accentColor ? { borderColor: data.accentColor, backgroundColor: `${data.accentColor}20` } : { borderColor: '#4b5563' }}>
-        <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
-        <div className="z-10 px-2">
-          {isEditing ? (
-            <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-gray-900/80 border border-gray-500 rounded px-1 outline-none text-gray-300 w-full text-center text-sm" />
-          ) : (
-            <div onDoubleClick={handleDoubleClick} className="text-gray-100 font-medium cursor-text text-sm max-w-[120px] text-center truncate">{data.label}</div>
-          )}
+      <div
+        className={`relative group flex flex-col items-center justify-center min-w-[100px] min-h-[60px] bg-gray-800/80 border shadow-md rounded-md ${isLocked ? "opacity-80" : ""}`}
+        style={data.accentColor ? { borderColor: data.accentColor, backgroundColor: `${data.accentColor}20` } : { borderColor: "#4b5563" }}
+      >
+        {sharedHandles}
+        <div className="px-3 py-2">
+          <ShapeLabel isEditing={isEditing} label={data.label} accentColor={data.accentColor} handleDoubleClick={handleDoubleClick} handleChange={handleChange} handleBlur={handleBlur} />
         </div>
-        <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
-        {isLocked && <Lock className="absolute top-1 right-1 w-3 h-3 text-yellow-400 z-20" />}
+        {isLocked && <Lock className="absolute top-1 right-1 w-3 h-3 text-yellow-400" />}
       </div>
     );
   }
 
-  // Standard card
+  if (isSvgShape) {
+    const renderShape = () => {
+      const c = data.accentColor;
+      if (data.type === "triangle") {
+        return (
+          <svg width={106} height={92} style={{ overflow: "visible" }}>
+            <polygon points="53,2 104,90 2,90" fill={c ? `${c}20` : "#1f2937"} stroke={c || "#4b5563"} strokeWidth={1.5} />
+          </svg>
+        );
+      }
+      if (data.type === "circle") return <OvalShape color={c} w={90} h={90} />;
+      if (data.type === "oval") return <OvalShape color={c} />;
+      if (data.type === "diamond") return <DiamondShape color={c} />;
+      if (data.type === "hexagon") return <HexagonShape color={c} />;
+      if (data.type === "cylinder") return <CylinderShape color={c} />;
+      if (data.type === "parallelogram") return <ParallelogramShape color={c} />;
+      if (data.type === "cloud") return <CloudShape color={c} />;
+      if (data.type === "star") return <StarShape color={c} />;
+      return null;
+    };
+
+    return (
+      <div className={`relative group flex items-center justify-center ${isLocked ? "opacity-80" : ""}`}>
+        {sharedHandles}
+        <div className="relative flex items-center justify-center">
+          {renderShape()}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-auto">
+              <ShapeLabel isEditing={isEditing} label={data.label} accentColor={data.accentColor} handleDoubleClick={handleDoubleClick} handleChange={handleChange} handleBlur={handleBlur} />
+            </div>
+          </div>
+        </div>
+        {isLocked && <Lock className="absolute top-0 right-0 w-3 h-3 text-yellow-400 z-20" />}
+      </div>
+    );
+  }
+
   return (
     <div className={`min-w-[180px] rounded-lg border bg-[#151923] shadow-lg overflow-hidden group ${baseClasses.split(' ')[1]} ${isLocked ? "ring-1 ring-yellow-500/30" : ""}`}>
       <Handle type="target" position={Position.Left} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -ml-1 ${handleClass}`} />
-      
+      <Handle type="target" position={Position.Top} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-4 h-2 rounded-sm -mt-1 ${handleClass}`} style={{ left: "50%" }} />
+
       <div className={`flex items-center justify-between px-3 py-2 border-b ${headerClasses}`}>
         <div className="flex items-center gap-2">
           <Icon size={14} />
           <span className="text-xs font-semibold uppercase tracking-wider">{data.type}</span>
           {isLocked && <Lock size={10} className="text-yellow-400 ml-1" />}
         </div>
-        
+
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            className={`p-1 hover:bg-black/20 rounded cursor-pointer ${isLocked ? "text-yellow-400" : ""}`}
-            onClick={handleToggleLock}
-            title={isLocked ? "Unlock node" : "Lock node"}
-          >
+          <button className={`p-1 hover:bg-black/20 rounded cursor-pointer ${isLocked ? "text-yellow-400" : ""}`} onClick={handleToggleLock} title={isLocked ? "Unlock node" : "Lock node"}>
             {isLocked ? <Unlock size={12} /> : <Lock size={12} />}
           </button>
 
@@ -195,13 +340,13 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
               </div>
             </PopoverContent>
           </Popover>
-          
+
           <button className={`p-1 hover:bg-black/20 rounded cursor-pointer ${showNotes ? 'bg-black/20' : ''}`} onClick={() => setShowNotes(!showNotes)} title="Notes">
             <MessageSquareText size={12} />
           </button>
         </div>
       </div>
-      
+
       <div className="p-3">
         {isEditing ? (
           <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-[#0f1117] border border-gray-700 rounded px-2 py-1 outline-none text-white w-full text-sm" placeholder="Add label..." />
@@ -210,7 +355,7 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
             {data.label || <span className="text-gray-500 italic">Add label...</span>}
           </div>
         )}
-        
+
         {showNotes && (
           <div className="mt-2 pt-2 border-t border-gray-800">
             <textarea
@@ -225,6 +370,7 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
       </div>
 
       <Handle type="source" position={Position.Right} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -mr-1 ${handleClass}`} />
+      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-4 h-2 rounded-sm -mb-1 ${handleClass}`} style={{ left: "50%" }} />
     </div>
   );
 });

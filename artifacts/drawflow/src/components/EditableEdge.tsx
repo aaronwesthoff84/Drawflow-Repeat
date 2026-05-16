@@ -1,9 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import {
-  EdgeProps,
-  getBezierPath,
-  useReactFlow,
-} from "@xyflow/react";
+import React, { useState, useCallback, useRef } from "react";
+import { EdgeProps, getBezierPath, useReactFlow } from "@xyflow/react";
 
 interface Waypoint {
   x: number;
@@ -26,7 +22,9 @@ export function EditableEdge({
 }: EdgeProps) {
   const { setEdges, screenToFlowPosition } = useReactFlow();
   const [hovered, setHovered] = useState(false);
+  const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null);
   const draggingRef = useRef<{ index: number } | null>(null);
+  const didDragRef = useRef(false);
 
   const waypoints: Waypoint[] = (data?.waypoints as Waypoint[]) || [];
 
@@ -34,16 +32,14 @@ export function EditableEdge({
     (newWaypoints: Waypoint[]) => {
       setEdges((eds) =>
         eds.map((e) =>
-          e.id === id
-            ? { ...e, data: { ...(e.data || {}), waypoints: newWaypoints } }
-            : e
+          e.id === id ? { ...e, data: { ...(e.data || {}), waypoints: newWaypoints } } : e
         )
       );
     },
     [id, setEdges]
   );
 
-  const handleDelete = useCallback(
+  const handleDeleteEdge = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       setEdges((eds) => eds.filter((e) => e.id !== id));
@@ -51,8 +47,20 @@ export function EditableEdge({
     [id, setEdges]
   );
 
+  const handleDeleteWaypoint = useCallback(
+    (e: React.MouseEvent, index: number) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const newWaypoints = waypoints.filter((_, i) => i !== index);
+      updateWaypoints(newWaypoints);
+      setHoveredWaypoint(null);
+    },
+    [waypoints, updateWaypoints]
+  );
+
   const handleEdgeClick = useCallback(
     (e: React.MouseEvent) => {
+      if (draggingRef.current) return;
       e.stopPropagation();
       const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const allPoints = [
@@ -66,10 +74,7 @@ export function EditableEdge({
         const mx = (allPoints[i].x + allPoints[i + 1].x) / 2;
         const my = (allPoints[i].y + allPoints[i + 1].y) / 2;
         const d = Math.hypot(flowPos.x - mx, flowPos.y - my);
-        if (d < minDist) {
-          minDist = d;
-          insertIdx = i;
-        }
+        if (d < minDist) { minDist = d; insertIdx = i; }
       }
       const newWaypoints = [...waypoints];
       newWaypoints.splice(insertIdx, 0, flowPos);
@@ -82,10 +87,12 @@ export function EditableEdge({
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
       e.preventDefault();
+      didDragRef.current = false;
       draggingRef.current = { index };
 
       const onMouseMove = (ev: MouseEvent) => {
         if (!draggingRef.current) return;
+        didDragRef.current = true;
         const flowPos = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
         setEdges((eds) =>
           eds.map((edge) => {
@@ -109,46 +116,17 @@ export function EditableEdge({
     [id, setEdges, screenToFlowPosition]
   );
 
-  const handleRemoveWaypoint = useCallback(
-    (e: React.MouseEvent, index: number) => {
-      e.stopPropagation();
-      const newWaypoints = waypoints.filter((_, i) => i !== index);
-      updateWaypoints(newWaypoints);
-    },
-    [waypoints, updateWaypoints]
-  );
-
   let path: string;
   if (waypoints.length === 0) {
-    [path] = getBezierPath({
-      sourceX,
-      sourceY,
-      sourcePosition,
-      targetX,
-      targetY,
-      targetPosition,
-    });
+    [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
   } else {
-    const points = [
-      { x: sourceX, y: sourceY },
-      ...waypoints,
-      { x: targetX, y: targetY },
-    ];
-    path =
-      `M ${points[0].x} ${points[0].y}` +
-      points
-        .slice(1)
-        .map((p) => ` L ${p.x} ${p.y}`)
-        .join("");
+    const points = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }];
+    path = `M ${points[0].x} ${points[0].y}` + points.slice(1).map((p) => ` L ${p.x} ${p.y}`).join("");
   }
 
-  const midIndex = Math.floor(
-    (waypoints.length > 0 ? waypoints.length - 1 : 0) / 2
-  );
-  const midPoint =
-    waypoints.length > 0
-      ? waypoints[midIndex]
-      : { x: (sourceX + targetX) / 2, y: (sourceY + targetY) / 2 };
+  const midPoint = waypoints.length > 0
+    ? waypoints[Math.floor(waypoints.length / 2)]
+    : { x: (sourceX + targetX) / 2, y: (sourceY + targetY) / 2 };
 
   const showControls = selected || hovered;
 
@@ -170,7 +148,7 @@ export function EditableEdge({
         fill="none"
         stroke="transparent"
         strokeWidth={16}
-        style={{ cursor: "pointer" }}
+        style={{ cursor: "copy" }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={handleEdgeClick}
@@ -181,58 +159,61 @@ export function EditableEdge({
         <circle
           cx={midPoint.x}
           cy={midPoint.y}
-          r={4}
-          fill="#6b7280"
-          stroke="#1a1f2e"
+          r={5}
+          fill="#374151"
+          stroke="#6b7280"
           strokeWidth={1.5}
-          style={{ cursor: "copy" }}
+          style={{ cursor: "copy", pointerEvents: "all" }}
           onClick={handleEdgeClick}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          title="Click to add waypoint"
+          title="Click to add bend point"
           className="nopan"
         />
       )}
 
       {waypoints.map((wp, i) => (
-        <g key={i} className="nopan nodrag">
+        <g key={i} className="nopan nodrag" style={{ pointerEvents: "all" }}>
           <circle
             cx={wp.x}
             cy={wp.y}
-            r={6}
-            fill="#3b82f6"
+            r={7}
+            fill={hoveredWaypoint === i ? "#2563eb" : "#3b82f6"}
             stroke="#1a1f2e"
             strokeWidth={2}
             style={{ cursor: "move" }}
             onMouseDown={(e) => handleWaypointMouseDown(e, i)}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
+            onMouseEnter={() => { setHovered(true); setHoveredWaypoint(i); }}
+            onMouseLeave={() => { setHoveredWaypoint(null); }}
           />
-          {showControls && (
-            <text
-              x={wp.x}
-              y={wp.y + 4}
-              textAnchor="middle"
-              fontSize={9}
-              fill="white"
-              style={{ cursor: "pointer", userSelect: "none", pointerEvents: "none" }}
-            >
-              ·
-            </text>
-          )}
-          {selected && (
-            <circle
-              cx={wp.x + 8}
-              cy={wp.y - 8}
-              r={5}
-              fill="#ef4444"
-              stroke="#1a1f2e"
-              strokeWidth={1.5}
+
+          {(hoveredWaypoint === i || selected) && (
+            <g
               style={{ cursor: "pointer" }}
-              onClick={(e) => handleRemoveWaypoint(e, i)}
-              onMouseEnter={() => setHovered(true)}
-              onMouseLeave={() => setHovered(false)}
-            />
+              onClick={(e) => handleDeleteWaypoint(e, i)}
+              onMouseEnter={() => { setHovered(true); setHoveredWaypoint(i); }}
+              onMouseLeave={() => setHoveredWaypoint(null)}
+            >
+              <circle
+                cx={wp.x + 10}
+                cy={wp.y - 10}
+                r={7}
+                fill="#1a1f2e"
+                stroke="#ef4444"
+                strokeWidth={1.5}
+              />
+              <text
+                x={wp.x + 10}
+                y={wp.y - 6}
+                textAnchor="middle"
+                fontSize={11}
+                fontWeight="bold"
+                fill="#ef4444"
+                style={{ userSelect: "none", pointerEvents: "none" }}
+              >
+                ×
+              </text>
+            </g>
           )}
         </g>
       ))}
@@ -240,22 +221,22 @@ export function EditableEdge({
       {showControls && (
         <g
           className="nopan nodrag"
-          transform={`translate(${midPoint.x}, ${midPoint.y})`}
+          transform={`translate(${midPoint.x}, ${midPoint.y - (waypoints.length > 0 ? 24 : 20)})`}
           style={{ cursor: "pointer" }}
-          onClick={handleDelete}
+          onClick={handleDeleteEdge}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
-          <circle cx={0} cy={-18} r={9} fill="#1a1f2e" stroke="#ef4444" strokeWidth={1.5} />
+          <rect x={-18} y={-9} width={36} height={18} rx={4} fill="#1a1f2e" stroke="#ef4444" strokeWidth={1.5} />
           <text
             x={0}
-            y={-14}
+            y={4}
             textAnchor="middle"
-            fontSize={12}
+            fontSize={10}
             fill="#ef4444"
             style={{ userSelect: "none", pointerEvents: "none" }}
           >
-            ×
+            del edge
           </text>
         </g>
       )}
