@@ -8,7 +8,7 @@ These are tracked issues that need to be addressed before or alongside feature w
 
 - **Edge migration shim:** Saved diagrams that used the old `smoothstep` edge type won't render correctly after the migration to `editable` edges. Need a backward-compat shim in `handleLoad` that upgrades old edges on load.
 - **Triangle shape inconsistency:** The triangle shape uses CSS `border` tricks rather than SVG, making it visually inconsistent with all other SVG-based shapes. Should be refactored to SVG `<polygon>`.
-- **Node handle discoverability:** Handles only appear on hover, which is confusing for new users who don't know to hover a node before connecting. Consider always-visible subtle handles or a first-run hint.
+- **Node handle discoverability:** Handles only appear on hover, which is confusing for users who don't know to hover a node before connecting. Consider always-visible subtle handles or a first-run hint.
 
 ---
 
@@ -35,95 +35,110 @@ Understanding these before building new features avoids duplicating logic or bre
 
 ---
 
-## Sprint Plan
+## Planned Feature List
 
 ### Sprint 1 — Canvas Interaction Polish
-**Items: 1, 3, 11, 13**
-*(Pulling 11 and 13 forward from their original positions — both are 1–2 line changes and cost nothing to include now)*
 
-| # | Feature | Effort | Notes |
-|---|---------|--------|-------|
-| 1 | Shape Resize Handles | Medium | React Flow `NodeResizer` component; scoped to CustomNode.tsx |
-| 3 | Edge Type Selector (per connection) | Small | Add to right-click edge context menu; no new state |
-| 11 | Zoom-to-Selection | Tiny | One toolbar button + `fitView({ nodes: selected })` call |
-| 13 | Minimap Click-to-Navigate | Tiny | MiniMap already supports `onClick` / `onNodeClick` props — just wire it |
+#### 1.1 Shape Resize Handles
+Allow nodes to be resized by dragging corner/edge handles. Especially useful for boxes, shapes, and group containers. React Flow supports `NodeResizer` — wire it in for shape-type nodes.
 
-**Why these together:** All pure canvas-interaction changes. No new state management, no new components. Items 11 and 13 are free additions — skipping them here means doing another sprint just for two-line changes.
+#### 1.2 Edge Type Selector (per connection)
+Right-click context menu option to switch an individual edge between bezier, straight, step, and smoothstep routing styles without losing waypoints.
+
+#### 1.3 Zoom-to-Selection
+A toolbar button or keyboard shortcut (e.g. `Shift+Z`) that fits the viewport to only the currently selected nodes, rather than the whole diagram.
+
+#### 1.4 Minimap Click-to-Navigate
+Make the minimap interactive so clicking or dragging on it pans the main canvas to that position. React Flow's `MiniMap` component supports `onClick` and `onNodeClick` props — wire them in.
 
 ---
 
 ### Sprint 2 — Node Richness
-**Items: 2, 4, 5, 9**
 
-| # | Feature | Effort | Notes |
-|---|---------|--------|-------|
-| 2 | Group / Container Nodes | Large | React Flow SubFlow API; works better after resize handles exist (Sprint 1) |
-| 4 | Custom Node Icons / Image Upload | Medium | File input → base64 in node data; isolated to CustomNode.tsx |
-| 5 | Diagram Comments / Annotations | Small | New floating sticky-note node type; no edge logic |
-| 9 | Dark/Light Theme Toggle | Small | CSS variable token swap; fully isolated from all other features |
+#### 2.1 Group / Container Nodes
+Add a "Group" node type that other nodes can be dragged inside. Groups act as visual containers with a label, collapsible behaviour, and automatic resizing to fit children. Builds on resize handles from Sprint 1.
 
-**Why these together:** Items 4, 5, and 9 don't touch each other at all and can be built in parallel. Item 2 is the anchor — it's the largest piece and benefits from resize handles from Sprint 1.
+#### 2.2 Custom Node Icons / Image Upload
+Let users upload a PNG or SVG and use it as a node's icon. Stored as base64 in node data. Useful for mapping real-world services (AWS, GCP, databases, etc.) onto diagram nodes.
+
+#### 2.3 Diagram Comments / Annotations
+Sticky-note style comments that float above the canvas and are not connected to any node. Useful for leaving context, reminders, or section labels directly on the diagram.
+
+#### 2.4 Dark/Light Theme Toggle
+Add a proper light mode with adjusted color tokens. Currently the app is dark-only. Persist the preference in `localStorage`.
 
 ---
 
 ### Sprint 3 — Content & Export
-**Items: 6, 8, 12, 15**
 
-| # | Feature | Effort | Notes |
-|---|---------|--------|-------|
-| 6 | Custom Edge Labels with Rich Text | Medium | Extends the existing edge label editor; scoped to EditableEdge.tsx |
-| 8 | Import from Mermaid / PlantUML | Medium | Parser work in `lib/`; complements existing Mermaid export |
-| 12 | Path Animation Controls | Small | Extends edge data + adds UI to right-click menu |
-| 15 | Export to Confluence / Notion / Markdown | Medium | Pure export logic; no canvas changes |
+#### 3.1 Custom Edge Labels with Rich Text
+Allow edge labels to contain multi-line text, icons, or styled badges (e.g. HTTP method tags like `GET` / `POST`). Double-click an edge label to open a mini rich-text editor.
 
-**Why these together:** Items 6 and 12 both touch edge data/rendering. Items 8 and 15 are both import/export — they live in `lib/` and don't touch canvas components.
+#### 3.2 Import from Mermaid / PlantUML
+Parse Mermaid.js or PlantUML syntax and render it as an editable React Flow diagram. Complements the existing Mermaid export to create a full round-trip workflow.
 
----
+#### 3.3 Path Animation Controls
+Per-edge controls for animation speed, flow direction (forward/reverse), and an on/off toggle. Useful for illustrating data flow direction on a specific connection.
 
-### Sprint 4 — Application-Level Features
-**Items: 7, 10, 14, 16**
-
-| # | Feature | Effort | Notes |
-|---|---------|--------|-------|
-| 7 | Multi-Page / Tab Diagrams | Large | Biggest state management change; wrap diagram state in a pages map |
-| 10 | Connection Validation Rules | Medium | Logic layer; doesn't change rendering, only connection behaviour |
-| 14 | Node Statistics Panel | Small | New sidebar panel component; reads from existing node/edge state |
-| 16 | Keyboard Shortcut Customization | Medium | Settings panel + localStorage-backed binding map |
-
-**Why these together:** All "application shell" features rather than canvas features. Item 7 is the heaviest lift of the sprint; 14 and 16 can be done in parallel alongside it.
+#### 3.4 Export to Confluence / Notion / Markdown
+Generate an embeddable diagram for Confluence (XML), a Notion-compatible image block, or a Markdown file with a rendered PNG attached.
 
 ---
 
-### Sprint 5 — Persistence Layer *(only if deploying publicly or going multi-user)*
-**Items: 17, 18, 19**
+### Sprint 4 — App-Level Features
 
-> **Note:** These are only worth building if the app is hosted for multiple users or accessed across devices. If you're the sole user working from a single machine with git, git already gives you most of this at the code level for free. The value of these features is specifically for non-technical users or shared/cloud deployments.
+#### 4.1 Multi-Page / Tab Diagrams
+Support multiple diagram pages within a single project file. Users can add named tabs (e.g. "Overview", "Data Layer", "Auth Flow") and switch between them without losing state. Largest state management change in this plan — diagram state becomes a map keyed by page ID.
 
-| # | Feature | Effort | Notes |
-|---|---------|--------|-------|
-| 17 | Version History & Branching | Medium | In-app named snapshots stored in localStorage (or cloud); different from git — these are user-friendly diagram checkpoints, not code commits |
-| 18 | Auto-Save to Cloud | Large | Requires a backend (API + database); replaces localStorage-only persistence. Precondition for 17 and 19 at scale |
-| 19 | Diagram Diff / Change Tracking | Large | Visual canvas diff (nodes green/red) between two saved versions; depends on 17 |
+#### 4.2 Connection Validation Rules
+Allow users to define rules that prevent invalid connections (e.g. "a DB node can only connect to a Service node"). Show visual feedback when a connection attempt violates a rule.
 
-**Build order within Sprint 5:** 18 first (cloud save), then 17 (version history), then 19 (diff). Each depends on the previous.
+#### 4.3 Node Statistics Panel
+A sidebar that shows diagram stats: total node and edge counts, nodes by category, most-connected node, and orphaned nodes (nodes with no connections).
 
----
-
-### Backlog / Future (not planned)
-
-| Feature | Reason deferred |
-|---------|----------------|
-| Real-Time Collaboration | Requires WebSocket infrastructure, CRDT or OT conflict resolution, and user auth. Complex enough to be its own multi-sprint project. Track it but don't plan it until the persistence layer (Sprint 5) is complete. |
+#### 4.4 Keyboard Shortcut Customization
+Let users remap keyboard shortcuts from a settings panel. Store custom bindings in `localStorage`.
 
 ---
 
-## Sprint Summary
+### Sprint 5 — AI Enhancements
 
-| Sprint | Items | Theme |
-|--------|-------|-------|
-| 1 | 1, 3, 11, 13 | Canvas interaction polish |
-| 2 | 2, 4, 5, 9 | Node richness |
-| 3 | 6, 8, 12, 15 | Content & export |
-| 4 | 7, 10, 14, 16 | Application-level features |
-| 5 | 17, 18, 19 | Persistence layer (conditional) |
-| Backlog | Real-Time Collaboration | Future |
+> **Build order note:** Item 5.5 (sample diagrams) is a natural starting point since the resulting examples directly inform the template library in 5.4. Items 5.1 and 5.2 extend the existing AI panel and can be worked in parallel. Item 5.3 is the most complex — it requires an API server endpoint and external service integration — and is best tackled last.
+
+#### 5.1 Diagram to Documentation
+AI reads the current diagram's nodes and edges and generates a structured Markdown document explaining the architecture. Output includes a system overview, a description of each node and its role, connection annotations, and a glossary of terms. The generated file can be copied to clipboard or downloaded directly.
+
+#### 5.2 Documentation to Diagram
+User pastes existing written documentation (e.g. a README, architecture doc, or design spec) into a panel. AI extracts the entities, systems, and relationships described in the text and generates a diagram from them. Works as an extension of the existing AI generation flow — new input mode, same DSL output pipeline.
+
+#### 5.3 Git Repository to Diagram
+Connect to a GitHub repository (via the GitHub API using a personal access token) and automatically generate diagrams from the codebase. The AI analyzes the file structure, import dependencies, API routes, and data models, then outputs one or more diagrams: a component/module dependency graph, a data flow diagram, or a service map. The user selects which diagram type to generate. Output is editable on the canvas like any other diagram.
+
+#### 5.4 Documentation Templates & AI-Guided Completion
+A built-in library of pre-built diagram and documentation template pairs covering common architectures (e.g. "REST API", "Microservices", "Data Pipeline", "Auth Flow", "Cloud Infrastructure"). Each template ships in two forms: a fully worked example and a blank version with labelled placeholder sections. The AI can either auto-fill a blank template based on the user's current diagram, or guide the user through it interactively — asking one question at a time and assembling the document as answers come in.
+
+#### 5.5 Expand and Improve Sample Diagrams
+Refresh the existing built-in sample diagrams to be more realistic and useful as references. Add new samples covering architectures not currently represented: microservices, event-driven systems, CI/CD pipelines, data lake ingestion, and mobile app backend. These samples also serve as the initial content for the template library in 5.4.
+
+---
+
+### Sprint 6 — Persistence (Lower Priority)
+
+> These features are lower priority for a single-user local app since `localStorage` and git together cover most needs. They become more valuable if the app is ever used across multiple devices or the browser's storage is at risk of being cleared. Build in order: 6.1 first (cloud storage foundation), then 6.2 (version snapshots), then 6.3 (visual diff — depends on 6.2).
+
+#### 6.1 Auto-Save to Cloud
+Replace the `localStorage`-only persistence with cloud save via a backend API. Diagrams are saved automatically to a database so they survive browser clears and are accessible from any device. Requires a user authentication layer.
+
+#### 6.2 Version History & Branching
+Save named snapshots of the diagram (e.g. "v1.0 — before auth layer") and allow restoring any previous version with one click. This operates at the diagram level — named checkpoints meaningful to the diagram's content — not at the git/code level. **Required by 6.3.**
+
+#### 6.3 Diagram Diff / Change Tracking
+Show a visual diff between any two saved versions from Version History (6.2): added nodes highlighted green, removed nodes red, changed edges marked. Gives a quick way to review what changed architecturally between two points in time. **Requires 6.2.**
+
+---
+
+## Backlog / Not Currently Planned
+
+| Feature | Notes |
+|---------|-------|
+| Real-Time Collaboration | WebSocket-based live cursors and shared editing. Requires CRDT or operational transform conflict resolution plus a persistent backend. Complex enough to be its own multi-sprint project — revisit only if the app ever becomes multi-user. |
