@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import CodeMirror from "@uiw/react-codemirror";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { parseDiagramDSL } from "../lib/diagramParser";
 import { serializeDiagram } from "../lib/diagramSerializer";
 import { DrawFlowNode, DrawFlowEdge } from "../types";
@@ -19,8 +17,9 @@ export function CodePanel({ isOpen, onClose, nodes, edges, onApply }: CodePanelP
   const [code, setCode] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const isInternalChange = useRef(false);
+  const parseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Sync canvas -> code
   useEffect(() => {
     if (!isOpen || isInternalChange.current) {
       isInternalChange.current = false;
@@ -34,19 +33,24 @@ export function CodePanel({ isOpen, onClose, nodes, edges, onApply }: CodePanelP
     return () => clearTimeout(timer);
   }, [nodes, edges, isOpen]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
+
   const handleChange = (val: string) => {
     setCode(val);
     isInternalChange.current = true;
-    
-    // Auto-parse on debounce
-    clearTimeout((window as any).parseTimeout);
-    (window as any).parseTimeout = setTimeout(() => {
+
+    if (parseTimeoutRef.current) clearTimeout(parseTimeoutRef.current);
+    parseTimeoutRef.current = setTimeout(() => {
       const result = parseDiagramDSL(val);
       setErrors(result.errors);
       if (result.errors.length === 0) {
         onApply(result.nodes, result.edges);
       }
-    }, 400);
+    }, 600);
   };
 
   const handleManualApply = () => {
@@ -55,6 +59,30 @@ export function CodePanel({ isOpen, onClose, nodes, edges, onApply }: CodePanelP
     if (result.errors.length === 0) {
       isInternalChange.current = true;
       onApply(result.nodes, result.edges);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).catch(() => {
+      textareaRef.current?.select();
+      document.execCommand("copy");
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const ta = e.currentTarget;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const newVal = code.substring(0, start) + "  " + code.substring(end);
+      setCode(newVal);
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + 2;
+      });
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      handleManualApply();
     }
   };
 
@@ -68,7 +96,20 @@ export function CodePanel({ isOpen, onClose, nodes, edges, onApply }: CodePanelP
           <span className="text-sm font-medium">Diagram as Code</span>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={handleManualApply} title="Apply Code">
+          <Button
+            variant="ghost" size="icon"
+            className="h-6 w-6 text-gray-400 hover:text-white"
+            onClick={handleCopy}
+            title="Copy all (Ctrl+A then Ctrl+C also works)"
+          >
+            <Copy size={14} />
+          </Button>
+          <Button
+            variant="ghost" size="icon"
+            className="h-6 w-6 text-gray-400 hover:text-white"
+            onClick={handleManualApply}
+            title="Apply code (Ctrl+Enter)"
+          >
             <Play size={14} />
           </Button>
           <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={onClose}>
@@ -76,20 +117,24 @@ export function CodePanel({ isOpen, onClose, nodes, edges, onApply }: CodePanelP
           </Button>
         </div>
       </div>
-      
-      <div className="flex-1 overflow-auto bg-[#282c34] flex flex-col">
-        <CodeMirror
+
+      <div className="flex-1 overflow-hidden flex flex-col bg-[#282c34]">
+        <textarea
+          ref={textareaRef}
           value={code}
-          height="100%"
-          theme={oneDark}
-          onChange={handleChange}
-          className="flex-1 text-sm text-left"
-          basicSetup={{
-            lineNumbers: true,
-            highlightActiveLineGutter: true,
-            foldGutter: true,
-          }}
+          onChange={e => handleChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          spellCheck={false}
+          className="flex-1 w-full h-full resize-none bg-[#282c34] text-[#abb2bf] font-mono text-sm p-3 outline-none border-none leading-relaxed"
+          placeholder={"# Paste or type DSL here\n# Example:\napi1 [api] \"My API\"\ndb1 [db] \"Database\"\napi1 -> db1 \"reads\""}
+          style={{ minHeight: 0 }}
         />
+      </div>
+
+      <div className="shrink-0 px-3 py-1.5 border-t border-gray-800 bg-[#1a1f2e]">
+        <p className="text-[10px] text-gray-500">
+          Ctrl+Enter to apply &nbsp;·&nbsp; Ctrl+C / Ctrl+V to copy/paste &nbsp;·&nbsp; Tab for indent
+        </p>
       </div>
 
       {errors.length > 0 && (
