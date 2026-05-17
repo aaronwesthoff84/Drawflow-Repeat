@@ -6,10 +6,10 @@
 
 These are tracked issues that need to be addressed before or alongside feature work to avoid compounding problems.
 
-- **Edge migration shim:** Saved diagrams that used the old `smoothstep` edge type won't render correctly after the migration to `editable` edges. Need a backward-compat shim in `handleLoad` that upgrades old edges on load.
-- **Triangle shape inconsistency:** The triangle shape uses CSS `border` tricks rather than SVG, making it visually inconsistent with all other SVG-based shapes. Should be refactored to SVG `<polygon>`.
-- **Node handle discoverability:** Handles only appear on hover, which is confusing for users who don't know to hover a node before connecting. Consider always-visible subtle handles or a first-run hint.
-- **DSL node IDs are UUIDs:** When a node is added via the canvas and the diagram is viewed in the Code panel, the node's ID is a raw UUID (e.g., `a30d7129-d59a-484b-a8b9-dea5a771107d`). This makes the DSL hard to read and edit by hand. IDs should be generated as human-friendly incremental names based on node type (e.g., the first API node becomes `API_1`, the second `API_2`). Affects `DiagramEditor.tsx` where nodes are created and `diagramParser.ts` where IDs are referenced.
+- ~~**Edge migration shim**~~ — **Fixed.** `handleLoad` in `DiagramEditor.tsx` now upgrades any edge with `type: "smoothstep"` (or no type) to `type: "editable"` and backfills `data.waypoints: []` on load. Old saved diagrams will render correctly.
+- ~~**Triangle shape inconsistency**~~ — **Fixed.** Triangle is now rendered as an SVG `<polygon>` inside the same `isSvgShape` block as all other shapes. CSS border trick removed.
+- ~~**Node handle discoverability**~~ — **Fixed.** All node handles changed from `opacity-0` to `opacity-20` so they are always faintly visible. They still animate to full opacity on hover.
+- ~~**DSL node IDs are UUIDs**~~ — **Fixed.** Added `generateNodeId(type, existingNodes)` in `DiagramEditor.tsx` that produces human-friendly IDs (`API_1`, `DB_2`, etc.). Used in drag-drop (`onDrop`) and quick-add (`handleQuickAddNode`). Existing nodes in saved diagrams keep their current IDs; only newly created nodes get the friendly format.
 - **Code panel live validation fires mid-type:** Validation is now debounced at 600ms after the last keystroke (improved from 400ms). If errors still appear mid-typing, a future option to disable live validation entirely can be added as a toggle.
 - ~~**Code panel lacks copy/paste support**~~ — **Fixed.** Replaced CodeMirror with a native `<textarea>` in `CodePanel.tsx`. Full `Ctrl+C` / `Ctrl+V` / `Ctrl+A` support now works. A dedicated Copy button in the panel header provides a one-click fallback. `Ctrl+Enter` applies the code. Tab inserts two-space indentation.
 

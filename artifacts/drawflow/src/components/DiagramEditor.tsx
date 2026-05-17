@@ -45,6 +45,14 @@ import { EditableEdge } from "./EditableEdge";
 const nodeTypes: NodeTypes = { custom: CustomNode as NodeTypes[string] };
 const edgeTypes: EdgeTypes = { editable: EditableEdge as EdgeTypes[string] };
 
+function generateNodeId(type: string, existingNodes: DrawFlowNode[]): string {
+  const prefix = type.toUpperCase();
+  const existingIds = new Set(existingNodes.map(n => n.id));
+  let n = 1;
+  while (existingIds.has(`${prefix}_${n}`)) n++;
+  return `${prefix}_${n}`;
+}
+
 const initialNodes: DrawFlowNode[] = [];
 const initialEdges: Edge[] = [];
 
@@ -255,8 +263,9 @@ export function DiagramEditorInner() {
 
   const handleQuickAddNode = useCallback((type: string, category: string, flowX: number, flowY: number) => {
     takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
+    const existingNodes = getNodes() as DrawFlowNode[];
     const newNode: DrawFlowNode = {
-      id: crypto.randomUUID(),
+      id: generateNodeId(type, existingNodes),
       type: "custom",
       position: { x: flowX - 90, y: flowY - 40 },
       data: { label: type, type: type as any, category: category as any },
@@ -380,8 +389,9 @@ export function DiagramEditorInner() {
     const category = event.dataTransfer.getData("application/reactflow/category");
     if (!type || !category) return;
     const position = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    const existingNodes = getNodes() as DrawFlowNode[];
     const newNode: DrawFlowNode = {
-      id: crypto.randomUUID(),
+      id: generateNodeId(type, existingNodes),
       type: "custom",
       position,
       data: { label: `${type} node`, type: type as any, category: category as any },
@@ -409,12 +419,17 @@ export function DiagramEditorInner() {
   };
 
   const handleLoad = (diagram: Diagram) => {
-    // Re-sync draggable with locked state when loading
     const loadedNodes = (diagram.nodes || []).map(n => ({
       ...n,
       draggable: n.data.locked ? false : undefined,
     }));
-    setNodes(loadedNodes); setEdges(diagram.edges || []);
+    // Migrate legacy smoothstep edges to editable type
+    const loadedEdges = (diagram.edges || []).map(e => ({
+      ...e,
+      type: (e.type === "smoothstep" || !e.type) ? "editable" : e.type,
+      data: e.data ?? { waypoints: [] },
+    }));
+    setNodes(loadedNodes); setEdges(loadedEdges);
     setDiagramName(diagram.name); setDiagramId(diagram.id as any);
     setIsLoadDialogOpen(false); clearHistory();
   };

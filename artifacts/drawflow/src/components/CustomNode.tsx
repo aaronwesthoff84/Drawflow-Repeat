@@ -231,10 +231,10 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
 
   const sharedHandles = (
     <>
-      <Handle type="target" position={Position.Top} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" style={{ left: "50%" }} />
-      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
-      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" style={{ left: "50%" }} />
-      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-400" />
+      <Handle type="target" position={Position.Top} isConnectable={isConnectable} className="opacity-20 group-hover:opacity-100 transition-opacity bg-gray-400" style={{ left: "50%" }} />
+      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="opacity-20 group-hover:opacity-100 transition-opacity bg-gray-400" />
+      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} className="opacity-20 group-hover:opacity-100 transition-opacity bg-gray-400" style={{ left: "50%" }} />
+      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="opacity-20 group-hover:opacity-100 transition-opacity bg-gray-400" />
     </>
   );
 
@@ -308,8 +308,8 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
 
   return (
     <div className={`min-w-[180px] rounded-lg border bg-[#151923] shadow-lg overflow-hidden group ${baseClasses.split(' ')[1]} ${isLocked ? "ring-1 ring-yellow-500/30" : ""}`}>
-      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -ml-1 ${handleClass}`} />
-      <Handle type="target" position={Position.Top} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-4 h-2 rounded-sm -mt-1 ${handleClass}`} style={{ left: "50%" }} />
+      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className={`opacity-20 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -ml-1 ${handleClass}`} />
+      <Handle type="target" position={Position.Top} isConnectable={isConnectable} className={`opacity-20 group-hover:opacity-100 transition-opacity w-4 h-2 rounded-sm -mt-1 ${handleClass}`} style={{ left: "50%" }} />
 
       <div className={`flex items-center justify-between px-3 py-2 border-b ${headerClasses}`}>
         <div className="flex items-center gap-2">
@@ -369,8 +369,8 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
         )}
       </div>
 
-      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -mr-1 ${handleClass}`} />
-      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} className={`opacity-0 group-hover:opacity-100 transition-opacity w-4 h-2 rounded-sm -mb-1 ${handleClass}`} style={{ left: "50%" }} />
+      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className={`opacity-20 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -mr-1 ${handleClass}`} />
+      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} className={`opacity-20 group-hover:opacity-100 transition-opacity w-4 h-2 rounded-sm -mb-1 ${handleClass}`} style={{ left: "50%" }} />
     </div>
   );
 });
