@@ -11,4 +11,10 @@ title = "README.md — ready for GitHub"
 id = "fnJO4x87FXKNTrKVNEQfx"
 uri = "file://PLANNING.md"
 type = "text"
-title = "PLANNING.md — 20 feature suggestions"
+title = "PLANNING.md — Sprint plan with Known Issues at top"
+
+[[outputs]]
+id = "RwjmGaJC3ns3NNxzU67xC"
+uri = "file://INSTALL.md"
+type = "text"
+title = "INSTALL.md — Full installation guide"
