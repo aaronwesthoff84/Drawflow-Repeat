@@ -1,4 +1,4 @@
-# DrawFlow → Repeat
+# DrawFlow
 
 A powerful, browser-based diagramming tool built with React and React Flow. Design architecture diagrams, system flows, data pipelines, and more — all without leaving your browser.
 
@@ -60,8 +60,8 @@ A powerful, browser-based diagramming tool built with React and React Flow. Desi
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- pnpm 8+
+- Node.js 20+
+- pnpm 10+
 
 ### Installation
 
