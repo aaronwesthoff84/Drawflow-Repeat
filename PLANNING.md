@@ -7,7 +7,8 @@
 These are tracked issues that need to be addressed before or alongside feature work to avoid compounding problems.
 
 - ~~**Edge migration shim**~~ — **Fixed.** `handleLoad` in `DiagramEditor.tsx` now upgrades any edge with `type: "smoothstep"` (or no type) to `type: "editable"` and backfills `data.waypoints: []` on load. Old saved diagrams will render correctly.
-- ~~**Triangle shape inconsistency**~~ — **Fixed.** Triangle is now rendered as an SVG `<polygon>` inside the same `isSvgShape` block as all other shapes. CSS border trick removed.
+- ~~**Triangle shape inconsistency**~~ — **Fixed (SVG rendering).** Triangle is now rendered as an SVG `<polygon>` consistent with all other shapes. However, testing revealed a related gap — see below.
+- **Shape nodes have no color picker:** SVG shape nodes (triangle, diamond, hexagon, cylinder, parallelogram, cloud, star, oval, circle) have no way to change color. The color palette button only exists in the hover header of card-style architecture nodes. Additionally, the right-click context menu for all node types lacks a color option entirely. Fix: add a color option to the right-click context menu so it works for every node type.
 - ~~**Node handle discoverability**~~ — **Fixed.** All node handles changed from `opacity-0` to `opacity-20` so they are always faintly visible. They still animate to full opacity on hover.
 - ~~**DSL node IDs are UUIDs**~~ — **Fixed.** Added `generateNodeId(type, existingNodes)` in `DiagramEditor.tsx` that produces human-friendly IDs (`API_1`, `DB_2`, etc.). Used in drag-drop (`onDrop`) and quick-add (`handleQuickAddNode`). Existing nodes in saved diagrams keep their current IDs; only newly created nodes get the friendly format.
 - **Code panel live validation fires mid-type:** Validation is now debounced at 600ms after the last keystroke (improved from 400ms). If errors still appear mid-typing, a future option to disable live validation entirely can be added as a toggle.
