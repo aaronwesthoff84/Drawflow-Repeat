@@ -72,7 +72,7 @@ export function TopBar({
         <div className="bg-[#0f1117] border border-[#2a3040] px-3 py-1.5 rounded-full flex items-center gap-2 mr-2">
           <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <span className="text-sm font-semibold tracking-wide text-gray-200 hidden sm:inline">
-            Draw<span className="text-gray-500 mx-1">→</span>Flow<span className="text-gray-500 mx-1">→</span>Repeat
+            DrawFlow
           </span>
         </div>
 
