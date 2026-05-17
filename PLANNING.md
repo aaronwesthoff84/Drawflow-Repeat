@@ -8,7 +8,7 @@ These are tracked issues that need to be addressed before or alongside feature w
 
 - ~~**Edge migration shim**~~ — **Fixed.** `handleLoad` in `DiagramEditor.tsx` now upgrades any edge with `type: "smoothstep"` (or no type) to `type: "editable"` and backfills `data.waypoints: []` on load. Old saved diagrams will render correctly.
 - ~~**Triangle shape inconsistency**~~ — **Fixed (SVG rendering).** Triangle is now rendered as an SVG `<polygon>` consistent with all other shapes. However, testing revealed a related gap — see below.
-- **Shape nodes have no color picker:** SVG shape nodes (triangle, diamond, hexagon, cylinder, parallelogram, cloud, star, oval, circle) have no way to change color. The color palette button only exists in the hover header of card-style architecture nodes. Additionally, the right-click context menu for all node types lacks a color option entirely. Fix: add a color option to the right-click context menu so it works for every node type.
+- ~~**Shape nodes have no color picker**~~ — **Fixed.** Added a Color section to the right-click context menu for all node types (arch, box, text, and all SVG shapes). 8 color swatches + a reset button. The card-style arch nodes retain their hover-header palette button as well.
 - ~~**Node handle discoverability**~~ — **Fixed.** All node handles changed from `opacity-0` to `opacity-20` so they are always faintly visible. They still animate to full opacity on hover.
 - ~~**DSL node IDs are UUIDs**~~ — **Fixed.** Added `generateNodeId(type, existingNodes)` in `DiagramEditor.tsx` that produces human-friendly IDs (`API_1`, `DB_2`, etc.). Used in drag-drop (`onDrop`) and quick-add (`handleQuickAddNode`). Existing nodes in saved diagrams keep their current IDs; only newly created nodes get the friendly format.
 - **Code panel live validation fires mid-type:** Validation is now debounced at 600ms after the last keystroke (improved from 400ms). If errors still appear mid-typing, a future option to disable live validation entirely can be added as a toggle.
@@ -41,19 +41,19 @@ Understanding these before building new features avoids duplicating logic or bre
 
 ## Planned Feature List
 
-### Sprint 1 — Canvas Interaction Polish
+### Sprint 1 — Canvas Interaction Polish ✅ COMPLETE
 
-#### 1.1 Shape Resize Handles
-Allow nodes to be resized by dragging corner/edge handles. Especially useful for boxes, shapes, and group containers. React Flow supports `NodeResizer` — wire it in for shape-type nodes.
+#### ~~1.1 Shape Resize Handles~~ — **Done**
+`NodeResizer` from `@xyflow/react` added to all four node variants (text, box, SVG shapes, card-style arch nodes). Blue resize handles appear when a node is selected and not locked. Min sizes enforced per type.
 
-#### 1.2 Edge Type Selector (per connection)
-Right-click context menu option to switch an individual edge between bezier, straight, step, and smoothstep routing styles without losing waypoints.
+#### ~~1.2 Edge Type Selector (per connection)~~ — **Done**
+Right-click any edge → Routing section with Bezier / Straight / Step buttons. Active style is highlighted blue. Stored in `edge.data.pathStyle`; waypoints are preserved across style changes. `EditableEdge.tsx` builds the correct SVG path for each style (including step routing through waypoints).
 
-#### 1.3 Zoom-to-Selection
-A toolbar button or keyboard shortcut (e.g. `Shift+Z`) that fits the viewport to only the currently selected nodes, rather than the whole diagram.
+#### ~~1.3 Zoom-to-Selection~~ — **Done**
+When one or more nodes are selected, a blue `Maximize2` button appears in the toolbar zoom cluster. Clicking it calls `fitView({ nodes: selected, padding: 0.3, duration: 800 })`. Falls back to full fit-view if nothing is selected.
 
-#### 1.4 Minimap Click-to-Navigate
-Make the minimap interactive so clicking or dragging on it pans the main canvas to that position. React Flow's `MiniMap` component supports `onClick` and `onNodeClick` props — wire them in.
+#### ~~1.4 Minimap Click-to-Navigate~~ — **Done**
+`MiniMap` now has `onClick` (click empty area → `setCenter` to that position) and `onNodeClick` (click a node → `setCenter` to that node at 1.5× zoom). Both animate at 400ms.
 
 ---
 

@@ -27,6 +27,7 @@ export function EditableEdge({
   const didDragRef = useRef(false);
 
   const waypoints: Waypoint[] = (data?.waypoints as Waypoint[]) || [];
+  const pathStyle = (data?.pathStyle as string) || "default";
 
   const updateWaypoints = useCallback(
     (newWaypoints: Waypoint[]) => {
@@ -116,12 +117,28 @@ export function EditableEdge({
     [id, setEdges, screenToFlowPosition]
   );
 
+  // Build SVG path based on pathStyle
   let path: string;
   if (waypoints.length === 0) {
-    [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+    if (pathStyle === "straight") {
+      path = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
+    } else if (pathStyle === "step") {
+      const midX = (sourceX + targetX) / 2;
+      path = `M ${sourceX} ${sourceY} L ${midX} ${sourceY} L ${midX} ${targetY} L ${targetX} ${targetY}`;
+    } else {
+      [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+    }
   } else {
     const points = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }];
-    path = `M ${points[0].x} ${points[0].y}` + points.slice(1).map((p) => ` L ${p.x} ${p.y}`).join("");
+    if (pathStyle === "step") {
+      path = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        const midX = (points[i - 1].x + points[i].x) / 2;
+        path += ` L ${midX} ${points[i - 1].y} L ${midX} ${points[i].y} L ${points[i].x} ${points[i].y}`;
+      }
+    } else {
+      path = `M ${points[0].x} ${points[0].y}` + points.slice(1).map((p) => ` L ${p.x} ${p.y}`).join("");
+    }
   }
 
   const midPoint = waypoints.length > 0
@@ -194,25 +211,8 @@ export function EditableEdge({
               onMouseEnter={() => { setHovered(true); setHoveredWaypoint(i); }}
               onMouseLeave={() => setHoveredWaypoint(null)}
             >
-              <circle
-                cx={wp.x + 10}
-                cy={wp.y - 10}
-                r={7}
-                fill="#1a1f2e"
-                stroke="#ef4444"
-                strokeWidth={1.5}
-              />
-              <text
-                x={wp.x + 10}
-                y={wp.y - 6}
-                textAnchor="middle"
-                fontSize={11}
-                fontWeight="bold"
-                fill="#ef4444"
-                style={{ userSelect: "none", pointerEvents: "none" }}
-              >
-                ×
-              </text>
+              <circle cx={wp.x + 10} cy={wp.y - 10} r={7} fill="#1a1f2e" stroke="#ef4444" strokeWidth={1.5} />
+              <text x={wp.x + 10} y={wp.y - 6} textAnchor="middle" fontSize={11} fontWeight="bold" fill="#ef4444" style={{ userSelect: "none", pointerEvents: "none" }}>×</text>
             </g>
           )}
         </g>
@@ -228,16 +228,7 @@ export function EditableEdge({
           onMouseLeave={() => setHovered(false)}
         >
           <rect x={-18} y={-9} width={36} height={18} rx={4} fill="#1a1f2e" stroke="#ef4444" strokeWidth={1.5} />
-          <text
-            x={0}
-            y={4}
-            textAnchor="middle"
-            fontSize={10}
-            fill="#ef4444"
-            style={{ userSelect: "none", pointerEvents: "none" }}
-          >
-            del edge
-          </text>
+          <text x={0} y={4} textAnchor="middle" fontSize={10} fill="#ef4444" style={{ userSelect: "none", pointerEvents: "none" }}>del edge</text>
         </g>
       )}
     </>

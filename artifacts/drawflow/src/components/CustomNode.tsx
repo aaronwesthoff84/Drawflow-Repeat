@@ -1,5 +1,5 @@
 import React, { memo, useState } from "react";
-import { Handle, Position, NodeProps, useReactFlow } from "@xyflow/react";
+import { Handle, Position, NodeProps, useReactFlow, NodeResizer } from "@xyflow/react";
 import { 
   Globe, Smartphone, User, 
   Zap, Server, Cpu, 
@@ -188,7 +188,7 @@ function OvalShape({ color, w = 130, h = 70 }: { color?: string; w?: number; h?:
   );
 }
 
-export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps) => {
+export const CustomNode = memo(({ id, data: rawData, isConnectable, selected }: NodeProps) => {
   const data = rawData as DrawFlowNodeData;
   const [isEditing, setIsEditing] = useState(false);
   const [showNotes, setShowNotes] = useState(!!data.notes);
@@ -241,6 +241,7 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
   if (isText) {
     return (
       <div className={`relative group ${isLocked ? "opacity-80" : ""}`}>
+        <NodeResizer isVisible={!!selected && !isLocked} minWidth={50} minHeight={24} color="#3b82f6" handleStyle={{ width: 8, height: 8, borderRadius: 2 }} />
         {sharedHandles}
         {isEditing ? (
           <input value={data.label} onChange={handleChange} onBlur={handleBlur} autoFocus className="bg-transparent border border-gray-500 rounded px-1 outline-none text-gray-300 min-w-[100px]" />
@@ -260,6 +261,7 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
         className={`relative group flex flex-col items-center justify-center min-w-[100px] min-h-[60px] bg-gray-800/80 border shadow-md rounded-md ${isLocked ? "opacity-80" : ""}`}
         style={data.accentColor ? { borderColor: data.accentColor, backgroundColor: `${data.accentColor}20` } : { borderColor: "#4b5563" }}
       >
+        <NodeResizer isVisible={!!selected && !isLocked} minWidth={100} minHeight={60} color="#3b82f6" handleStyle={{ width: 8, height: 8, borderRadius: 2 }} />
         {sharedHandles}
         <div className="px-3 py-2">
           <ShapeLabel isEditing={isEditing} label={data.label} accentColor={data.accentColor} handleDoubleClick={handleDoubleClick} handleChange={handleChange} handleBlur={handleBlur} />
@@ -292,6 +294,7 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
 
     return (
       <div className={`relative group flex items-center justify-center ${isLocked ? "opacity-80" : ""}`}>
+        <NodeResizer isVisible={!!selected && !isLocked} minWidth={60} minHeight={60} color="#3b82f6" handleStyle={{ width: 8, height: 8, borderRadius: 2 }} />
         {sharedHandles}
         <div className="relative flex items-center justify-center">
           {renderShape()}
@@ -308,6 +311,7 @@ export const CustomNode = memo(({ id, data: rawData, isConnectable }: NodeProps)
 
   return (
     <div className={`min-w-[180px] rounded-lg border bg-[#151923] shadow-lg overflow-hidden group ${baseClasses.split(' ')[1]} ${isLocked ? "ring-1 ring-yellow-500/30" : ""}`}>
+      <NodeResizer isVisible={!!selected && !isLocked} minWidth={180} minHeight={80} color="#3b82f6" handleStyle={{ width: 8, height: 8, borderRadius: 2 }} />
       <Handle type="target" position={Position.Left} isConnectable={isConnectable} className={`opacity-20 group-hover:opacity-100 transition-opacity w-2 h-4 rounded-sm -ml-1 ${handleClass}`} />
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} className={`opacity-20 group-hover:opacity-100 transition-opacity w-4 h-2 rounded-sm -mt-1 ${handleClass}`} style={{ left: "50%" }} />
 

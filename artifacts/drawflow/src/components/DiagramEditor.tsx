@@ -71,6 +71,17 @@ const QUICK_ADD_TYPES = [
   { type: "metrics", category: "infra", Icon: LineChart, label: "Metrics" },
 ] as const;
 
+const NODE_COLORS = [
+  { name: "blue", value: "#3b82f6" },
+  { name: "green", value: "#22c55e" },
+  { name: "amber", value: "#f59e0b" },
+  { name: "red", value: "#ef4444" },
+  { name: "purple", value: "#a855f7" },
+  { name: "pink", value: "#ec4899" },
+  { name: "cyan", value: "#06b6d4" },
+  { name: "gray", value: "#6b7280" },
+];
+
 const EDGE_COLORS = [
   { label: "Gray", value: "#8b949e" },
   { label: "Blue", value: "#3b82f6" },
@@ -521,6 +532,20 @@ export function DiagramEditorInner() {
     setEditingEdge({ id: edge.id, label: (edge.label as string) || "", x: evt.clientX, y: evt.clientY });
   }, []);
 
+  const handleNodeColorChange = useCallback((nodeId: string, color: string | undefined) => {
+    setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, accentColor: color } } : n));
+    setContextMenu(null);
+  }, [setNodes]);
+
+  const handleZoomToSelection = useCallback(() => {
+    const selected = getNodes().filter(n => n.selected);
+    if (selected.length > 0) {
+      fitView({ nodes: selected, duration: 800, padding: 0.3 });
+    } else {
+      fitView({ duration: 800, padding: 0.1 });
+    }
+  }, [getNodes, fitView]);
+
   const saveEdgeLabel = useCallback(() => {
     if (!editingEdge) return;
     takeSnapshot(getNodes() as DrawFlowNode[], getEdges());
@@ -630,6 +655,8 @@ export function DiagramEditorInner() {
         onTogglePresentation={handleTogglePresentation}
         isMinimapVisible={isMinimapVisible}
         onToggleMinimap={() => setIsMinimapVisible(p => !p)}
+        hasSelection={selectedNodes.length > 0}
+        onZoomToSelection={handleZoomToSelection}
       />
 
       {/* Find / Search bar */}
@@ -685,7 +712,15 @@ export function DiagramEditorInner() {
             fitView className="bg-[#0f1117]"
           >
             {bgVariant !== "none" && <Background variant={bgVariant} color="#333" gap={16} />}
-            {isMinimapVisible && <MiniMap nodeColor={n => (n.data?.accentColor as string) || "#444"} maskColor="rgba(0,0,0,0.7)" style={{ backgroundColor: "#1a1f2e" }} />}
+            {isMinimapVisible && (
+              <MiniMap
+                nodeColor={n => (n.data?.accentColor as string) || "#444"}
+                maskColor="rgba(0,0,0,0.7)"
+                style={{ backgroundColor: "#1a1f2e", cursor: "pointer" }}
+                onClick={(_event, position) => setCenter(position.x, position.y, { duration: 400 })}
+                onNodeClick={(_event, node) => setCenter(node.position.x + 90, node.position.y + 40, { zoom: 1.5, duration: 400 })}
+              />
+            )}
             <Controls className="bg-[#1a1f2e] border-gray-800 text-white fill-white" />
 
             {nodes.length === 0 && (
@@ -752,6 +787,26 @@ export function DiagramEditorInner() {
                 }
               </button>
               <div className="my-1 border-t border-gray-800" />
+              <div className="px-3 py-1.5">
+                <div className="text-xs text-gray-500 mb-1.5">Color</div>
+                <div className="flex gap-1 flex-wrap">
+                  {NODE_COLORS.map(({ name, value }) => (
+                    <button
+                      key={name}
+                      title={name}
+                      className={`w-5 h-5 rounded-full border hover:scale-110 transition-transform ${contextMenu.node.data.accentColor === value ? "border-white" : "border-gray-600"}`}
+                      style={{ backgroundColor: value }}
+                      onClick={() => handleNodeColorChange(contextMenu.node.id, value)}
+                    />
+                  ))}
+                  <button
+                    title="Reset color"
+                    className={`w-5 h-5 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center hover:scale-110 transition-transform text-[8px] text-gray-400 ${!contextMenu.node.data.accentColor ? "border-white" : ""}`}
+                    onClick={() => handleNodeColorChange(contextMenu.node.id, undefined)}
+                  >↺</button>
+                </div>
+              </div>
+              <div className="my-1 border-t border-gray-800" />
               <button className="w-full text-left px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-2" onClick={() => handleDeleteNode(contextMenu.node.id)}>
                 <Trash2 className="w-4 h-4" /> Delete
               </button>
@@ -791,6 +846,32 @@ export function DiagramEditorInner() {
                     onClick={() => { updateEdgeStyle(edgeContextMenu.edge.id, { strokeWidth: w }); setEdgeContextMenu(null); }}
                   >{label}</button>
                 ))}
+              </div>
+              <div className="px-3 pb-2">
+                <div className="text-xs text-gray-500 mb-1">Routing</div>
+                <div className="flex gap-1">
+                  {[
+                    { label: "Bezier", value: "default" },
+                    { label: "Straight", value: "straight" },
+                    { label: "Step", value: "step" },
+                  ].map(({ label, value }) => (
+                    <button
+                      key={value}
+                      className={`flex-1 text-xs px-2 py-1 rounded transition-colors ${
+                        ((edgeContextMenu.edge.data?.pathStyle as string) || "default") === value
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white"
+                      }`}
+                      onClick={() => {
+                        setEdges(eds => eds.map(e => e.id === edgeContextMenu.edge.id
+                          ? { ...e, data: { ...(e.data || {}), pathStyle: value } }
+                          : e
+                        ));
+                        setEdgeContextMenu(null);
+                      }}
+                    >{label}</button>
+                  ))}
+                </div>
               </div>
               <div className="px-3 mb-2">
                 <div className="text-xs text-gray-500 mb-1">Color</div>

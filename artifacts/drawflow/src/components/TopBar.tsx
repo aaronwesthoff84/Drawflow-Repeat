@@ -1,7 +1,7 @@
 import React from "react";
 import {
   Plus, Save, FolderOpen, Share2,
-  ZoomIn, ZoomOut, Maximize, PanelTopClose, PanelTopOpen,
+  ZoomIn, ZoomOut, Maximize, Maximize2, PanelTopClose, PanelTopOpen,
   Undo2, Redo2, ImageDown, Keyboard, LayoutGrid,
   Grid3X3, AlignJustify, Crosshair, Ban, Magnet,
   Code2, Sparkles, NotebookPen, LayoutTemplate, Command,
@@ -45,6 +45,8 @@ interface TopBarProps {
   onTogglePresentation: () => void;
   isMinimapVisible: boolean;
   onToggleMinimap: () => void;
+  hasSelection: boolean;
+  onZoomToSelection: () => void;
 }
 
 const bgIcons = {
@@ -60,7 +62,7 @@ export function TopBar({
   onLayout, onShortcutsHelp, bgVariant, onCycleBgVariant, snapToGrid, onToggleSnap,
   isCodePanelOpen, onToggleCodePanel, isAIPanelOpen, onToggleAIPanel,
   isNotesPanelOpen, onToggleNotesPanel, onOpenTemplates, onOpenCommandPalette,
-  onTogglePresentation, isMinimapVisible, onToggleMinimap,
+  onTogglePresentation, isMinimapVisible, onToggleMinimap, hasSelection, onZoomToSelection,
 }: TopBarProps) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const BgIcon = bgVariant ? bgIcons[bgVariant] : bgIcons.none;
@@ -165,6 +167,11 @@ export function TopBar({
         <Button variant="ghost" size="icon" onClick={() => fitView({ duration: 800 })} className="text-gray-300 hover:text-white hover:bg-gray-800 hidden sm:flex" title="Fit View">
           <Maximize className="w-4 h-4" />
         </Button>
+        {hasSelection && (
+          <Button variant="ghost" size="icon" onClick={onZoomToSelection} className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 hidden sm:flex" title="Zoom to Selection">
+            <Maximize2 className="w-4 h-4" />
+          </Button>
+        )}
 
         <div className="h-6 w-px bg-[#2a3040] mx-1" />
 
