@@ -1,5 +1,16 @@
 # DrawFlow — Planning & Roadmap
 
+have AI add when there is credits:
+
+Bugfix - I can confirm that in triangle and other nodes thre is the color picker now.  
+1. for the ressize, when i click th enode the resize blue buttons are there but whne i resized the trigangle i got this error: [plugin:runtime-error-plugin] (unknown runtime error)
+Click outside, press Esc key, or fix the code to dismiss.
+You can also disable this overlay by setting server.hmr.overlay to false in vite.config.ts.
+2. Edge routing - all works other than the solid line.  it doesn't change from any of the others to solid when i selec it.
+3. Zoom to selection - worked
+4. mini-map - click to navigate worked.
+5. Add additional item to add if its not there yet, is the ability to change the interaction method with the canvas to allow different functions.  example right now it's just the hand and you can drag and pan, you can drag nodes and objects.  but its missing the abililit to click and hold and then draw a box to selec tthings.  the feature can either be made so that you are able to just go between modes without having tho activiate it and it's based on things like holding the mouse vs click, or it can be dedicated modes such as clicking a button gets you into the the current mode, or takes you into more of selection mode.
+
 ---
 
 ## Known Issues / Tech Debt
